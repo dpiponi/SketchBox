@@ -75,14 +75,20 @@ installShaders path = do
 
     return program
 
-compileProgram :: FilePath -> String -> ExceptT String IO Program
+compileProgram :: FilePath -> String -> IO Program
 compileProgram path name = do
-    program <- loadShaders [
-        ShaderInfo VertexShader (joinPath [path, name ++ ".vert"]),
-        ShaderInfo FragmentShader (joinPath [path, name ++ ".frag"])]
+    print $ "prog"
+    let vertexPath = joinPath [path, name ++ ".vert"]
+    let fragmentPath = joinPath [path, name ++ ".frag"]
+    print vertexPath
+    print fragmentPath
+    Right program <- runExceptT $ loadShaders [
+        ShaderInfo VertexShader vertexPath,
+        ShaderInfo FragmentShader fragmentPath]
+    print $ "prog2"
 
     currentProgram $= Just program
-    io $ setShaderWindow program (512, 512)
+    setShaderWindow program (512, 512)
 
     return program
 
