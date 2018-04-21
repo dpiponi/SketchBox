@@ -32,7 +32,7 @@ finalPoints num = e ++ w where
 
 main :: IO ()
 main = do
-    let num = 20
+    let num = 200
     let m = 200
 
     u' <- crand (num * 2)
