@@ -44,6 +44,8 @@ main = do
     let p = diag d :: Matrix (Complex Double)
     let p' = u `mul` diag d' `mul` inv u :: Matrix (Complex Double)
 
+    initSketch
+    
     mainGifLoop () (render p p')
 
 render :: Matrix (Complex Double) -> Matrix (Complex Double) -> Float -> StateT (World ()) IO ()

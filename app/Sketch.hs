@@ -62,11 +62,6 @@ init path userData = do
         Left e -> putStrLn ("Error: " ++ e) >> return world
         Right program -> return $ world & shaderProgram .~ Just program
 
-watching :: String -> Bool
-watching path = 
-    let name = takeFileName path
-    in name == "litterbox.frag" || name == "litterbox.vert"
-
 withProgram :: (GL.Program -> StateT (World u) IO ()) -> StateT (World u) IO ()
 withProgram cmd = 
     use shaderProgram >>= \case
@@ -136,11 +131,9 @@ gifLoop :: Int -> Int -> Options -> (Float -> StateT (World u) IO ()) -> StateT 
 gifLoop i n _ _ | i >= n = return ()
 gifLoop i n options render = do
     window <- use mainWindow
---     interval <- realToFrac <$> (diffUTCTime <$> io getCurrentTime <*> use startTime)
     let interval = fromIntegral i
     withProgram $ \program -> io $ setShaderTime program interval
     render interval
---   {-
     pixelData <- io $ (mallocForeignPtrArray (512*512*3) :: IO (ForeignPtr (PixelBaseComponent PixelRGB8)))
     array <- io $ withForeignPtr pixelData $ \ptr -> do
                   io $ GL.readPixels (GL.Position 0 0) (GL.Size 512 512) $ GL.PixelData GL.RGB GL.UnsignedByte ptr
@@ -155,14 +148,14 @@ gifLoop i n options render = do
     quit <- mapM handleUIEvent events
     unless (or quit) $ gifLoop (i+1) n options render
 
+initSketch :: IO ()
+initSketch = do
+    SDL.initialize [SDL.InitVideo]
+
 mainGifLoop :: u -> (Float -> StateT (World u) IO ()) -> IO ()
 mainGifLoop userData render = do
     args <- getArgs
     let options = parse (Options { _shaderDirectory = "." }) args
     print options
-     
-    SDL.initialize [SDL.InitVideo]
-
     world <- init (_shaderDirectory options) userData
-
     evalStateT (gifLoop (-10) 210 options render) world
