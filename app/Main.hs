@@ -25,10 +25,6 @@ main = do
     let num = 20
     let m = 200
 
---     h <- crand (num*2)
--- 
---     let h' = scale 0.5 (h + tr h)
---     let u = expm (scale (0 :+ 4.2) h')
     u' <- crand (num * 2)
     let u = scale 0.5 u'
 
@@ -50,23 +46,6 @@ main = do
         let t = fromIntegral i/fromIntegral (m-1)
         return $ eigenvalues $ scale (1-t) p + scale t p'
     let eigs = listArray (0, m-1) elts
-
-    {-
-    let n = 200 :: Int
-    let m = 200 :: Int
-    x <- randn n n
-    y <- randn n n
-    let p = toComplex (x, y)
-    x <- randn n n
-    y <- randn n n
-    let v = toComplex (x, y)
-    elts <- forM [0..m-1] $ \i -> do
-        let phase = 0.2*exp(0 :+ 2*pi*fromIntegral i/fromIntegral m)
-        return $ eigenvalues (p+scale phase v)
-    let eigs = listArray (0, m-1) elts
-    -}
-
---     mainLoop (render eigs)
     mainGifLoop () (render eigs)
 
 render :: Array Int (H.Vector (Complex Double)) -> Float -> StateT (World ()) IO ()
@@ -76,14 +55,8 @@ render e t' = do
     GL.clearColor GL.$= GL.Color4 0.0 0.0 0.0 1
     io $ GL.clear [GL.ColorBuffer]
     Just prog <- use shaderProgram
---     forM_ (H.toList e) $ \(x :+ y) ->
---         io $ drawPoint prog (GL.Vertex2 (realToFrac x) (realToFrac y))
---     let it = floor (10*t) --floor (50.0*(t `mod'` 8.0))
     let it = floor t --floor (50.0*(t `mod'` 8.0))
---     forM [0..5] $ \jt ->
---         forM (H.toList (e A.! (clamp (it-jt)))) $ \(x :+ y) -> do
---             io $ drawPoint prog (GL.Vertex2 (0.05*realToFrac x) (0.05*realToFrac y))
     forM (H.toList (e A.! (clamp it))) $ \(x :+ y) -> do
         let p = GL.Vertex2 (0.04*realToFrac x) (0.04*realToFrac y) :: GL.Vertex2 Float
-        io $ drawPoint prog "vPosition" p
+        io $ drawPoint prog "vPosition" [p] "pointSize" (8.0 :: Float)
     io GL.flush
