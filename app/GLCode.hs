@@ -152,13 +152,13 @@ drawPoints program vertices as = do
             vertexAttribPointer loc $=
               (ToFloat, VertexArrayDescriptor 1 Float 0 ptr)
 
-drawPoint :: PointType a => Program -> a
-drawPoint program = drawPoint' program $ do
+drawPoint :: PointType a => Program -> Int -> a
+drawPoint program n = drawPoint' program $ do
     vertexProgramPointSize $= Enabled
     pointSprite $= Enabled
     blend $= Enabled
     blendFunc $= (SrcAlpha, OneMinusSrcAlpha)
-    drawArrays Points 0 1
+    drawArrays Points 0 (fromIntegral n)
 --     print "Drawing points"
 
 class PointType a where

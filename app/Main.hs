@@ -20,6 +20,16 @@ crand n = do
     y <- randn n n
     return $ toComplex (x, y)
 
+initialPoints :: Int -> [Complex Double]
+initialPoints num = n ++ s where
+    n = [(-10+20*fromIntegral i/(fromIntegral num)) :+ (-20) | i <- [0, 1 .. num-1]]
+    s = [(-10+20*fromIntegral i/(fromIntegral num)) :+ 20 | i <- [0, 1 .. num-1]]
+
+finalPoints :: Int -> [Complex Double]
+finalPoints num = e ++ w where
+    e = [(-20) :+ (-10+20*fromIntegral i/(fromIntegral num)) | i <- [0, 1 .. num-1]]
+    w = [20 :+ (-10+20*fromIntegral i/(fromIntegral num)) | i <- [0, 1 .. num-1]]
+
 main :: IO ()
 main = do
     let num = 20
@@ -28,35 +38,26 @@ main = do
     u' <- crand (num * 2)
     let u = scale 0.5 u'
 
-    let n = [(-10+20*fromIntegral i/(fromIntegral num)) :+ (-20) | i <- [0, 1 .. num-1]]
-    let s = [(-10+20*fromIntegral i/(fromIntegral num)) :+ 20 | i <- [0, 1 .. num-1]]
-    let e = [(-20) :+ (-10+20*fromIntegral i/(fromIntegral num)) | i <- [0, 1 .. num-1]]
-    let w = [20 :+ (-10+20*fromIntegral i/(fromIntegral num)) | i <- [0, 1 .. num-1]]
-
-    let d = fromList $ n++s
-    let d' = fromList $ e++w
+    let d = fromList $ initialPoints num
+    let d' = fromList $ finalPoints num
 
     let p = diag d :: Matrix (Complex Double)
     let p' = u `mul` diag d' `mul` inv u :: Matrix (Complex Double)
 
-    print $ "d' =" ++ show d'
-    print $ "eig =" ++ show (eigenvalues p')
+    mainGifLoop () (render p p')
 
-    elts <- forM [0..m-1] $ \i -> do
-        let t = fromIntegral i/fromIntegral (m-1)
-        return $ eigenvalues $ scale (1-t) p + scale t p'
-    let eigs = listArray (0, m-1) elts
-    mainGifLoop () (render eigs)
+render :: Matrix (Complex Double) -> Matrix (Complex Double) -> Float -> StateT (World ()) IO ()
+render p p' t' = do
+    let t = if t' < 0 then 0.0 else if t' >= 200 then 1.0 else t'/200
+    
+    let eigs = eigenvalues $ scale (1-realToFrac t) p + scale (realToFrac t) p'
 
-render :: Array Int (H.Vector (Complex Double)) -> Float -> StateT (World ()) IO ()
-render e t' = do
-    let t = t'
-    let clamp i = if i < 0 then 0 else if i >= 200 then 199 else i
     GL.clearColor GL.$= GL.Color4 0.0 0.0 0.0 1
     io $ GL.clear [GL.ColorBuffer]
+
     Just prog <- use shaderProgram
-    let it = floor t --floor (50.0*(t `mod'` 8.0))
-    forM (H.toList (e A.! (clamp it))) $ \(x :+ y) -> do
-        let p = GL.Vertex2 (0.04*realToFrac x) (0.04*realToFrac y) :: GL.Vertex2 Float
-        io $ drawPoint prog "vPosition" [p] "pointSize" (8.0 :: Float)
+    let points = [GL.Vertex2 (0.04*realToFrac x) (0.04*realToFrac y) |
+                    x :+ y <- H.toList eigs] :: [GL.Vertex2 Float]
+    io $ drawPoint prog (length points) "vPosition" points "pointSize" (8.0 :: Float)
+
     io GL.flush
