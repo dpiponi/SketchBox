@@ -1,3 +1,10 @@
+#version 120
+
+uniform vec2 iResolution;
+uniform vec2 iMouse;
+uniform float iTime;
+varying vec2 tcoord;
+
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float u = gl_PointCoord.x;
     float v = gl_PointCoord.y;
@@ -10,4 +17,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     c1 = max(0.0, c1);
     float c = c0+c1+0.2;
     fragColor = vec4(vec3(1.0,0.5,0.0)*c0+vec3(0.0,0.5,1.0)*c1,ff>0 ? 1 : 0);
+}
+
+void main() {
+    vec4 color;
+    mainImage(color, gl_FragCoord.xy);
+    gl_FragColor = color;
 }

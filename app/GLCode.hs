@@ -22,34 +22,11 @@ voidIO = liftIO
 i :: (Num b, Integral a) => a -> b
 i = fromIntegral
 
-preamble :: B.ByteString
-preamble = "\
-    \#version 120\n\
-    \uniform vec2 iResolution;\n\
-    \uniform vec2 iMouse;\n\
-    \uniform float iTime;\n\
-    \varying vec2 tcoord;\n\
-    \#line 0\n"
-
-postamble :: B.ByteString
-postamble = "\
-    \\n\
-    \void main() {\n\
-    \    vec4 color;\n\
-    \    mainImage(color, gl_FragCoord.xy);\n\
-    \    gl_FragColor = color;\n\
-    \}"
-
 data ShaderInfo = ShaderInfo ShaderType FilePath
     deriving (Eq, Ord, Show)
 
 compileAndCheck :: Shader -> ExceptT String IO ()
 compileAndCheck = checked compileShader compileStatus shaderInfoLog "compile"
-
-preprocess :: ShaderType -> B.ByteString -> B.ByteString
-preprocess VertexShader src = src
-preprocess FragmentShader src = preamble `B.append` src `B.append` postamble
-preprocess _ _ = error "Unknown shader type"
 
 liftCatch :: (IOException -> e) -> IO a -> ExceptT e IO a
 liftCatch f m = ExceptT $ liftM (either (Left . f) Right) (try m)
@@ -59,7 +36,7 @@ loadCompileAttach _ [] = return ()
 loadCompileAttach program (ShaderInfo shType source : infos) = ExceptT $
    createShader shType `bracketOnError` deleteObjectName $ \shader -> runExceptT $ do
       src <- liftCatch show (B.readFile source)
-      shaderSourceBS shader $= preprocess shType src
+      shaderSourceBS shader $= src
       compileAndCheck shader
       io $ attachShader program shader
       loadCompileAttach program infos
@@ -94,8 +71,17 @@ installShaders path = do
         ShaderInfo FragmentShader (joinPath [path, "litterbox.frag"])]
 
     currentProgram $= Just program
---     attribLocation program "vPosition" $= AttribLocation 0
---     attribLocation program "texCoord" $= AttribLocation 1
+    io $ setShaderWindow program (512, 512)
+
+    return program
+
+compileProgram :: FilePath -> String -> ExceptT String IO Program
+compileProgram path name = do
+    program <- loadShaders [
+        ShaderInfo VertexShader (joinPath [path, name ++ ".vert"]),
+        ShaderInfo FragmentShader (joinPath [path, name ++ ".frag"])]
+
+    currentProgram $= Just program
     io $ setShaderWindow program (512, 512)
 
     return program

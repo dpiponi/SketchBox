@@ -22,13 +22,13 @@ crand n = do
 
 initialPoints :: Int -> [Complex Double]
 initialPoints num = n ++ s where
-    n = [(-10+20*fromIntegral i/(fromIntegral num)) :+ (-20) | i <- [0, 1 .. num-1]]
-    s = [(-10+20*fromIntegral i/(fromIntegral num)) :+ 20 | i <- [0, 1 .. num-1]]
+    n = [(-12.5+25*fromIntegral i/(fromIntegral num)) :+ (-20) | i <- [0, 1 .. num-1]]
+    s = [(-12.5+25*fromIntegral i/(fromIntegral num)) :+ 20 | i <- [0, 1 .. num-1]]
 
 finalPoints :: Int -> [Complex Double]
 finalPoints num = e ++ w where
-    e = [(-20) :+ (-10+20*fromIntegral i/(fromIntegral num)) | i <- [0, 1 .. num-1]]
-    w = [20 :+ (-10+20*fromIntegral i/(fromIntegral num)) | i <- [0, 1 .. num-1]]
+    e = [(-20) :+ (-12.5+25*fromIntegral i/(fromIntegral num)) | i <- [0, 1 .. num-1]]
+    w = [20 :+ (-12.5+25*fromIntegral i/(fromIntegral num)) | i <- [0, 1 .. num-1]]
 
 main :: IO ()
 main = do
@@ -58,6 +58,6 @@ render p p' t' = do
     Just prog <- use shaderProgram
     let points = [GL.Vertex2 (0.04*realToFrac x) (0.04*realToFrac y) |
                     x :+ y <- H.toList eigs] :: [GL.Vertex2 Float]
-    io $ drawPoint prog (length points) "vPosition" points "pointSize" (8.0 :: Float)
+    io $ drawPoint prog (length points) "vPosition" points "pointSize" (2.0 :: Float)
 
     io GL.flush
