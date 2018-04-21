@@ -167,6 +167,7 @@ class PointType a where
 instance (a ~ ()) => PointType (IO a) where
     drawPoint' program = id
 
+-- Float array
 instance (PointType r) => PointType (String -> [Float] -> r) where
     drawPoint' program s attr values = drawPoint' program $ do
             loc <- get $ attribLocation program attr
@@ -177,14 +178,14 @@ instance (PointType r) => PointType (String -> [Float] -> r) where
             s
             vertexAttribArray loc $= Disabled
 
+-- Uniform Float
 instance (PointType r) => PointType (String -> Float -> r) where
     drawPoint' program s attr value = drawPoint' program $ do
             loc <- get $ uniformLocation program attr
---             vertexAttribArray loc $= Enabled
             uniform loc $= value
             s
---             vertexAttribArray loc $= Disabled
 
+-- Vector2 array
 instance (PointType r) => PointType (String -> [Vertex2 Float] -> r) where
     drawPoint' program s attr values = drawPoint' program $ do
             loc <- get $ attribLocation program attr
@@ -195,15 +196,11 @@ instance (PointType r) => PointType (String -> [Vertex2 Float] -> r) where
             s
             vertexAttribArray loc $= Disabled
 
+-- Uniform vec2f
 instance (PointType r) => PointType (String -> Vertex2 Float -> r) where
     drawPoint' program s attr value = drawPoint' program $ do
-            loc <- get $ attribLocation program attr
-            vertexAttribArray loc $= Enabled
-            withArray [value] $ \ptr ->
-                vertexAttribPointer loc $=
-                  (ToFloat, VertexArrayDescriptor 2 Float 0 ptr)
-            s
-            vertexAttribArray loc $= Disabled
+            loc <- get $ uniformLocation program attr
+            uniform loc $= value
 
 drawLine :: Program -> Vertex2 Float -> Vertex2 Float -> IO ()
 drawLine program p0 p1 = do
