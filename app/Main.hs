@@ -48,9 +48,9 @@ main = do
 
 --    myProgram <- compileProgram "shader2" "litterbox"
     
-    mainGifLoop () (render p p')
+    mainGifLoop (render p p')
 
-render :: Matrix (Complex Double) -> Matrix (Complex Double) -> Float -> StateT (World ()) IO ()
+render :: Matrix (Complex Double) -> Matrix (Complex Double) -> Float -> SketchMonad ()
 render p p' t' = do
     let t = if t' < 0 then 0.0 else if t' >= 200 then 1.0 else t'/200
     Just program <- use shaderProgram
@@ -62,6 +62,6 @@ render p p' t' = do
 
     let points = [GL.Vertex2 (0.04*realToFrac x) (0.04*realToFrac y) |
                     x :+ y <- H.toList eigs] :: [GL.Vertex2 Float]
-    io $ drawPoint program (length points) "vPosition" points "pointSize" (2.0 :: Float)
+    drawPoint program (length points) "vPosition" points "pointSize" (2.0 :: Float)
 
     io GL.flush

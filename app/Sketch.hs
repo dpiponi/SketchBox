@@ -4,6 +4,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 module Sketch where
 
@@ -23,10 +25,10 @@ import Data.Fixed
 -- import Control.Monad.STM
 import qualified SDL
 import Prelude hiding (init)
-import qualified Graphics.Rendering.OpenGL as GL
+import Graphics.Rendering.OpenGL as GL
 import SDL.Vect
 import Control.Monad.Except
-import Control.Monad.State as S
+import Control.Monad.State as S hiding (get)
 import Control.Lens
 import qualified Data.Vector.Storable as SV
 
@@ -35,12 +37,11 @@ import System.FilePath
 import GLCode
 import SDLCode
 
-data World a = World {
+data World = World {
         _windowSize :: (Int32, Int32),
         _shaderProgram :: Maybe GL.Program,
         _mainWindow :: SDL.Window,
-        _startTime :: UTCTime,
-        _user :: a
+        _startTime :: UTCTime
     }
 
 $(makeLenses ''World)
@@ -51,39 +52,147 @@ data Options = Options {
 
 $(makeLenses ''Options)
 
+type SketchMonad a = StateT World IO a
+
+class PointType a where
+    drawPoint' :: GL.Program -> SketchMonad () -> a
+
+instance (a ~ ()) => PointType (SketchMonad a) where
+    drawPoint' program = id
+
+drawPoint :: PointType a => GL.Program -> Int -> a
+drawPoint program n = drawPoint' program $ do
+    GL.vertexProgramPointSize GL.$= GL.Enabled
+    GL.pointSprite GL.$= Enabled
+    GL.blend GL.$= GL.Enabled
+    GL.blendFunc GL.$= (GL.SrcAlpha, GL.OneMinusSrcAlpha)
+    io $ GL.drawArrays GL.Points 0 (fromIntegral n)
+
+-- Float array
+instance (PointType r) => PointType (String -> [Float] -> r) where
+    drawPoint' program s attr values = drawPoint' program $ do
+            loc <- get $ attribLocation program attr
+            vertexAttribArray loc GL.$= Enabled
+            io $ withArray values $ \ptr ->
+                vertexAttribPointer loc GL.$=
+                  (ToFloat, VertexArrayDescriptor 1 Float 0 ptr)
+            s
+            vertexAttribArray loc GL.$= Disabled
+
+-- Uniform Float
+instance (PointType r) => PointType (String -> Float -> r) where
+    drawPoint' program s attr value = drawPoint' program $ do
+            loc <- get $ uniformLocation program attr
+            uniform loc GL.$= value
+            s
+
+-- Vector2 array
+instance (PointType r) => PointType (String -> [GL.Vertex2 Float] -> r) where
+    drawPoint' program s attr values = drawPoint' program $ do
+            loc <- get $ attribLocation program attr
+            vertexAttribArray loc GL.$= Enabled
+            io $ withArray values $ \ptr ->
+                vertexAttribPointer loc GL.$=
+                  (ToFloat, VertexArrayDescriptor 2 Float 0 ptr)
+            s
+            vertexAttribArray loc GL.$= Disabled
+
+-- Uniform vec2f
+instance (PointType r) => PointType (String -> GL.Vertex2 Float -> r) where
+    drawPoint' program s attr value = drawPoint' program $ do
+            loc <- get $ uniformLocation program attr
+            uniform loc GL.$= value
+
+drawLine :: GL.Program -> GL.Vertex2 Float -> GL.Vertex2 Float -> SketchMonad ()
+drawLine program p0 p1 = do
+    let vertices = [p0, p1]
+    let tvertices = [GL.Vertex2 0.0 1.0, GL.Vertex2 1.0 0.0] :: [GL.Vertex2 Float]
+    positionLoc <- get $ attribLocation program "vPosition"
+    texLoc <- get $ attribLocation program "texCoord"
+
+    vertexAttribArray positionLoc GL.$= Enabled
+    vertexAttribArray texLoc GL.$= Enabled
+    io $ withArray vertices $ \ptr ->
+        vertexAttribPointer positionLoc GL.$=
+          (ToFloat, VertexArrayDescriptor 2 Float 0 ptr)
+    io $ withArray tvertices $ \ptr ->
+        vertexAttribPointer texLoc GL.$=
+          (ToFloat, VertexArrayDescriptor 2 Float 0 ptr)
+    io $ drawArrays Lines 0 2
+    vertexAttribArray positionLoc GL.$= Disabled
+    vertexAttribArray texLoc GL.$= Disabled
+
+drawLine'' :: LineType a => GL.Program -> a
+drawLine'' program = drawLine' program $ do
+    blend GL.$= Enabled
+    blendFunc GL.$= (SrcAlpha, OneMinusSrcAlpha)
+    io $ drawArrays Lines 0 2
+    io $ print "Drawing lines"
+
+class LineType a where
+    drawLine' :: GL.Program -> SketchMonad () -> a
+
+instance (a ~ ()) => LineType (SketchMonad a) where
+    drawLine' program = id
+
+instance (LineType r) => LineType (String -> Float -> Float -> r) where
+    drawLine' program s attr value0 value1 = drawLine' program $ do
+            loc <- get $ attribLocation program attr
+            vertexAttribArray loc GL.$= Enabled
+            io $ withArray [value0, value1] $ \ptr ->
+                vertexAttribPointer loc GL.$=
+                  (ToFloat, VertexArrayDescriptor 1 Float 0 ptr)
+            s
+            vertexAttribArray loc GL.$= Disabled
+
+instance (LineType r) => LineType (String -> GL.Vertex2 Float -> GL.Vertex2 Float -> r) where
+    drawLine' program s attr value0 value1 = drawLine' program $ do
+            loc <- get $ attribLocation program attr
+            vertexAttribArray loc GL.$= Enabled
+            io $ withArray [value0, value1] $ \ptr ->
+                vertexAttribPointer loc GL.$=
+                  (ToFloat, VertexArrayDescriptor 2 Float 0 ptr)
+            s
+            vertexAttribArray loc GL.$= Disabled
+
 -- Some duplication here XXX
-init :: FilePath -> u -> IO (World u)
-init path userData = do
+init :: FilePath -> IO World
+init path = do
     window <- initWindow
 
     start <- getCurrentTime
-    let world = World (512, 512) Nothing window start userData
+    let world = World {
+        _windowSize = (512, 512),
+        _shaderProgram = Nothing,
+        _mainWindow = window,
+        _startTime = start
+    }
     runExceptT (installShaders path) >>= \case
         Left e -> putStrLn ("Error: " ++ e) >> return world
         Right program -> return $ world & shaderProgram .~ Just program
 
-withProgram :: (GL.Program -> StateT (World u) IO ()) -> StateT (World u) IO ()
+withProgram :: (GL.Program -> StateT World IO ()) -> StateT World IO ()
 withProgram cmd = 
     use shaderProgram >>= \case
         Nothing -> return ()
         Just program -> cmd program
 
-reshape :: (Int32, Int32) -> StateT (World u) IO ()
+reshape :: (Int32, Int32) -> StateT World IO ()
 reshape (w, h) = do
     withProgram $ \program -> io $ setShaderWindow program (w, h)
     GL.viewport GL.$= (GL.Position 0 0, GL.Size (i w) (i h))
     windowSize .= (w, h)
 
-mouse :: (Int32, Int32) -> StateT (World u) IO ()
+mouse :: (Int32, Int32) -> StateT World IO ()
 mouse (x, y) = withProgram $ \program -> do
     (_, h) <- use windowSize
     io $ setShaderMouse program (x, h-y)
 
-handleKey :: SDL.Keysym -> StateT (World u) IO Bool
+handleKey :: SDL.Keysym -> StateT World IO Bool
 handleKey (SDL.Keysym {SDL.keysymScancode = SDL.ScancodeEscape}) = return True
 handleKey (SDL.Keysym { }) = return False
 
-handlePayload :: SDL.EventPayload -> StateT (World u) IO Bool
+handlePayload :: SDL.EventPayload -> StateT World IO Bool
 handlePayload (SDL.WindowResizedEvent
                             (SDL.WindowResizedEventData { SDL.windowResizedEventSize = V2 w h })) =
                             reshape (w, h) >> return False
@@ -96,7 +205,7 @@ handlePayload (SDL.KeyboardEvent
 handlePayload SDL.QuitEvent = return True
 handlePayload _ = return False
 
-handleUIEvent :: SDL.Event -> StateT (World u) IO Bool
+handleUIEvent :: SDL.Event -> StateT World IO Bool
 handleUIEvent SDL.Event { SDL.eventPayload = payload} = handlePayload payload
 
 parse :: Options -> [String] -> Options
@@ -104,19 +213,19 @@ parse options [] = options
 parse options ("-d" : path : args) = parse (options { _shaderDirectory = path }) args
 parse options args = error ("Incomprehensible options " ++ unwords args)
 
-mainLoop :: u -> (Float -> StateT (World u) IO ()) -> IO ()
-mainLoop userData render = do
+mainLoop :: (Float -> StateT World IO ()) -> IO ()
+mainLoop render = do
     args <- getArgs
     let options = parse (Options { _shaderDirectory = "." }) args
     print options
      
     SDL.initialize [SDL.InitVideo]
 
-    world <- init (_shaderDirectory options) userData
+    world <- init (_shaderDirectory options)
 
     evalStateT (loop options render) world
 
-loop :: Options -> (Float -> StateT (World u) IO ()) -> StateT (World u) IO ()
+loop :: Options -> (Float -> StateT World IO ()) -> StateT World IO ()
 loop options render = do
     window <- use mainWindow
     interval <- realToFrac <$> (diffUTCTime <$> io getCurrentTime <*> use startTime)
@@ -135,7 +244,7 @@ writeGif width height pixelData filename = do
     let Right zzz = writeGifImageWithPalette filename im pa
     io zzz
 
-gifLoop :: Int -> Int -> Options -> (Float -> StateT (World u) IO ()) -> StateT (World u) IO ()
+gifLoop :: Int -> Int -> Options -> (Float -> SketchMonad ()) -> SketchMonad ()
 gifLoop i n _ _ | i >= n = return ()
 gifLoop i n options render = do
     window <- use mainWindow
@@ -153,10 +262,10 @@ initSketch :: IO ()
 initSketch = do
     SDL.initialize [SDL.InitVideo]
 
-mainGifLoop :: u -> (Float -> StateT (World u) IO ()) -> IO ()
-mainGifLoop userData render = do
+mainGifLoop :: (Float -> SketchMonad ()) -> IO ()
+mainGifLoop render = do
     args <- getArgs
     let options = parse (Options { _shaderDirectory = "." }) args
     print options
-    world <- init (_shaderDirectory options) userData
-    evalStateT (gifLoop (-10) 210 options render) world
+    world <- init (_shaderDirectory options)
+    io $ evalStateT (gifLoop (-10) 210 options render) world
