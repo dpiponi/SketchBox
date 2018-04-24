@@ -69,6 +69,7 @@ drawPoint name n = drawPoint' name $ do
     GL.pointSprite GL.$= Enabled
     GL.blend GL.$= GL.Enabled
     GL.blendFunc GL.$= (GL.SrcAlpha, GL.OneMinusSrcAlpha)
+    currentProgram $= Just program
     io $ GL.drawArrays GL.Points 0 (fromIntegral n)
 
 -- Float array
