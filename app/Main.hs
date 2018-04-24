@@ -21,15 +21,18 @@ crand n = do
     y <- randn n n
     return $ toComplex (x, y)
 
+unit :: Floating a => Int -> [a]
+unit n = [fromIntegral i/fromIntegral n | i <- [0..n-1]]
+
 initialPoints :: Int -> [Complex Double]
 initialPoints num = n ++ s where
-    n = [(-12.5+25*fromIntegral i/(fromIntegral num)) :+ (-20) | i <- [0, 1 .. num-1]]
-    s = [(-12.5+25*fromIntegral i/(fromIntegral num)) :+ 20 | i <- [0, 1 .. num-1]]
+    n = [(-12.5+25*i) :+ (-20) | i <- unit num]
+    s = [(-12.5+25*i) :+ 20 | i <- unit num]
 
 finalPoints :: Int -> [Complex Double]
 finalPoints num = e ++ w where
-    e = [(-20) :+ (-12.5+25*fromIntegral i/(fromIntegral num)) | i <- [0, 1 .. num-1]]
-    w = [20 :+ (-12.5+25*fromIntegral i/(fromIntegral num)) | i <- [0, 1 .. num-1]]
+    e = [(-20) :+ (-12.5+25*i) | i <- unit num]
+    w = [20 :+ (-12.5+25*i) | i <- unit num]
 
 main :: IO ()
 main = do
