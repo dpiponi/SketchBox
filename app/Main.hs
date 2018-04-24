@@ -1,3 +1,4 @@
+-- comment
 module Main where
 
 import qualified Graphics.Rendering.OpenGL as GL
