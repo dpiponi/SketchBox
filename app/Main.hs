@@ -17,10 +17,7 @@ rrand :: Int -> IO (Matrix Double)
 rrand n = randn n n
 
 crand :: Int -> IO (Matrix (Complex Double))
-crand n = do
-    x <- randn n n
-    y <- randn n n
-    return $ toComplex (x, y)
+crand n = toComplex <$> ((,) <$> randn n n <*> randn n n)
 
 unit :: Floating a => Int -> [a]
 unit n = [fromIntegral i/fromIntegral n | i <- [0..n-1]]
@@ -60,6 +57,6 @@ main = do
 
         let points = [GL.Vertex2 (0.04*realToFrac x) (0.04*realToFrac y) |
                         x :+ y <- eigs] :: [GL.Vertex2 Float]
-        drawPoint "shader" (length points) "vPosition" points "pointSize" (2.0 :: Float)
+        drawPoint "shader" (length points) "vPosition" points "pointSize" (8.0 :: Float)
 
         io GL.flush
