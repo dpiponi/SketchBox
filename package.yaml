@@ -32,6 +32,8 @@ dependencies:
 - vector
 - hmatrix
 - array
+- containers
+- directory
 
 library:
   source-dirs: src

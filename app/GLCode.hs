@@ -1,10 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 
 module GLCode where
 
 import Control.Monad.Except
+import Data.List
+import System.Directory
 import Graphics.Rendering.OpenGL
 import Foreign.Marshal.Array
 import qualified Data.ByteString as B
@@ -65,16 +68,36 @@ loadShaders infos = ExceptT $
       linkAndCheck program
       return program
 
-installShaders :: FilePath -> ExceptT String IO Program
+installShaders :: FilePath -> IO [(String, Program)]
 installShaders path = do
-    program <- loadShaders [
-        ShaderInfo VertexShader (joinPath [path, "litterbox.vert"]),
-        ShaderInfo FragmentShader (joinPath [path, "litterbox.frag"])]
-
-    currentProgram $= Just program
-    io $ setShaderWindow program (512, 512)
-
-    return program
+    files <- liftIO $ getDirectoryContents path
+    let files' = nub $ map dropExtension files
+    io $ print files'
+    fs <- forM files' $ \filename -> do
+        let vertName = addExtension filename ".vert"
+        let vertPath = joinPath [path, vertName]
+        let fragName = addExtension filename ".frag"
+        let fragPath = joinPath [path, fragName]
+        vertExists <- liftIO $ doesFileExist vertPath
+        fragExists <- liftIO $ doesFileExist fragPath
+        putStrLn $ "Looking for " ++ vertName ++ ", " ++ fragName
+        if vertExists && fragExists
+            then do
+                io $ putStrLn $ "Installing '" ++ filename ++ "'"
+                program <- runExceptT $ loadShaders [
+                    ShaderInfo VertexShader vertPath,
+                    ShaderInfo FragmentShader fragPath]
+                case program of
+                    Left e -> do
+                        io $ putStrLn $ "Failed " ++ filename
+                        return []
+                    Right program -> do
+                        io $ putStrLn $ "Compiled " ++ filename
+                        currentProgram $= Just program
+                        io $ setShaderWindow program (512, 512)
+                        return [(filename, program)]
+            else return []
+    return $ concat fs
 
 compileProgram :: FilePath -> String -> IO Program
 compileProgram path name = do

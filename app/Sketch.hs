@@ -31,6 +31,7 @@ import Control.Monad.Except
 import Control.Monad.State as S hiding (get)
 import Control.Lens
 import qualified Data.Vector.Storable as SV
+import Data.Map.Strict as M
 
 import System.FilePath
 
@@ -39,7 +40,7 @@ import SDLCode
 
 data World = World {
         _windowSize :: (Int32, Int32),
-        _shaderProgram :: Maybe GL.Program,
+        _shaderProgram :: M.Map String GL.Program,
         _mainWindow :: SDL.Window,
         _startTime :: UTCTime
     }
@@ -55,13 +56,15 @@ $(makeLenses ''Options)
 type SketchMonad a = StateT World IO a
 
 class PointType a where
-    drawPoint' :: GL.Program -> SketchMonad () -> a
+    drawPoint' :: String -> SketchMonad () -> a
 
 instance (a ~ ()) => PointType (SketchMonad a) where
-    drawPoint' program = id
+    drawPoint' name = id
 
-drawPoint :: PointType a => GL.Program -> Int -> a
-drawPoint program n = drawPoint' program $ do
+drawPoint :: PointType a => String -> Int -> a
+drawPoint name n = drawPoint' name $ do
+    programs <- use shaderProgram
+    let Just program = M.lookup name programs
     GL.vertexProgramPointSize GL.$= GL.Enabled
     GL.pointSprite GL.$= Enabled
     GL.blend GL.$= GL.Enabled
@@ -70,7 +73,9 @@ drawPoint program n = drawPoint' program $ do
 
 -- Float array
 instance (PointType r) => PointType (String -> [Float] -> r) where
-    drawPoint' program s attr values = drawPoint' program $ do
+    drawPoint' name s attr values = drawPoint' name $ do
+            programs <- use shaderProgram
+            let Just program = M.lookup name programs
             loc <- get $ attribLocation program attr
             vertexAttribArray loc GL.$= Enabled
             io $ withArray values $ \ptr ->
@@ -81,14 +86,19 @@ instance (PointType r) => PointType (String -> [Float] -> r) where
 
 -- Uniform Float
 instance (PointType r) => PointType (String -> Float -> r) where
-    drawPoint' program s attr value = drawPoint' program $ do
+    drawPoint' name s attr value = drawPoint' name $ do
+            programs <- use shaderProgram
+            io $ print programs
+            let Just program = M.lookup name programs
             loc <- get $ uniformLocation program attr
             uniform loc GL.$= value
             s
 
 -- Vector2 array
 instance (PointType r) => PointType (String -> [GL.Vertex2 Float] -> r) where
-    drawPoint' program s attr values = drawPoint' program $ do
+    drawPoint' name s attr values = drawPoint' name $ do
+            programs <- use shaderProgram
+            let Just program = M.lookup name programs
             loc <- get $ attribLocation program attr
             vertexAttribArray loc GL.$= Enabled
             io $ withArray values $ \ptr ->
@@ -99,7 +109,9 @@ instance (PointType r) => PointType (String -> [GL.Vertex2 Float] -> r) where
 
 -- Uniform vec2f
 instance (PointType r) => PointType (String -> GL.Vertex2 Float -> r) where
-    drawPoint' program s attr value = drawPoint' program $ do
+    drawPoint' name s attr value = drawPoint' name $ do
+            programs <- use shaderProgram
+            let Just program = M.lookup name programs
             loc <- get $ uniformLocation program attr
             uniform loc GL.$= value
 
@@ -163,30 +175,34 @@ init path = do
     start <- getCurrentTime
     let world = World {
         _windowSize = (512, 512),
-        _shaderProgram = Nothing,
+        _shaderProgram = M.empty,
         _mainWindow = window,
         _startTime = start
     }
-    runExceptT (installShaders path) >>= \case
-        Left e -> putStrLn ("Error: " ++ e) >> return world
-        Right program -> return $ world & shaderProgram .~ Just program
+    programs <- installShaders path
+    return $ world & shaderProgram .~ M.fromList programs
 
-withProgram :: (GL.Program -> StateT World IO ()) -> StateT World IO ()
-withProgram cmd = 
-    use shaderProgram >>= \case
+withProgram :: String -> (GL.Program -> StateT World IO ()) -> StateT World IO ()
+withProgram name cmd = do
+    programs <- use shaderProgram
+    case M.lookup name programs of
         Nothing -> return ()
         Just program -> cmd program
 
+-- Going to be user responsibility to set window size
 reshape :: (Int32, Int32) -> StateT World IO ()
 reshape (w, h) = do
-    withProgram $ \program -> io $ setShaderWindow program (w, h)
+    -- withProgram "shader" $ \program -> io $ setShaderWindow program (w, h)
     GL.viewport GL.$= (GL.Position 0 0, GL.Size (i w) (i h))
     windowSize .= (w, h)
 
+-- Going to be user resposibility to set mouse
 mouse :: (Int32, Int32) -> StateT World IO ()
-mouse (x, y) = withProgram $ \program -> do
-    (_, h) <- use windowSize
-    io $ setShaderMouse program (x, h-y)
+mouse _ = return ()
+
+-- mouse (x, y) = withProgram $ \program -> do
+--     (_, h) <- use windowSize
+--     io $ setShaderMouse program (x, h-y)
 
 handleKey :: SDL.Keysym -> StateT World IO Bool
 handleKey (SDL.Keysym {SDL.keysymScancode = SDL.ScancodeEscape}) = return True
@@ -229,7 +245,8 @@ loop :: Options -> (Float -> StateT World IO ()) -> StateT World IO ()
 loop options render = do
     window <- use mainWindow
     interval <- realToFrac <$> (diffUTCTime <$> io getCurrentTime <*> use startTime)
-    withProgram $ \program -> io $ setShaderTime program interval
+    -- user going to set time in shader
+    -- withProgram $ \program -> io $ setShaderTime program interval
     render interval
     io $ SDL.glSwapWindow window
     events <- io SDL.pollEvents
@@ -249,7 +266,8 @@ gifLoop i n _ _ | i >= n = return ()
 gifLoop i n options render = do
     window <- use mainWindow
     let interval = fromIntegral i
-    withProgram $ \program -> io $ setShaderTime program interval
+    --user going to set time in shader
+    --withProgram $ \program -> io $ setShaderTime program interval
     render interval
     pixelData <- io $ (mallocForeignPtrArray (512*512*3) :: IO (ForeignPtr (PixelBaseComponent PixelRGB8)))
     io $ writeGif 512 512 pixelData $ "xxx." ++ show (1500+i) ++ ".gif"
@@ -264,6 +282,7 @@ initSketch = do
 
 mainGifLoop :: (Float -> SketchMonad ()) -> IO ()
 mainGifLoop render = do
+    initSketch
     args <- getArgs
     let options = parse (Options { _shaderDirectory = "." }) args
     print options

@@ -8,6 +8,7 @@ import Prelude hiding (init)
 import Control.Monad.State as S
 import GLCode
 import Control.Lens
+import qualified Data.Map.Strict as M
 
 import Sketch
 
@@ -32,7 +33,7 @@ finalPoints num = e ++ w where
 
 main :: IO ()
 main = do
-    let num = 200
+    let num = 20
     let m = 200
 
     u' <- crand (num * 2)
@@ -41,27 +42,20 @@ main = do
     let d = fromList $ initialPoints num
     let d' = fromList $ finalPoints num
 
-    let p = diag d :: Matrix (Complex Double)
-    let p' = u `mul` diag d' `mul` inv u :: Matrix (Complex Double)
+    let p = diag d
+    let p' = u `mul` diag d' `mul` inv u
 
-    initSketch
+    mainGifLoop $ \time -> do
 
---    myProgram <- compileProgram "shader2" "litterbox"
-    
-    mainGifLoop (render p p')
+        let t = if time < 0 then 0.0 else if time >= 200 then 1.0 else time/200
+        
+        let eigs = eigenvalues $ scale (1-realToFrac t) p + scale (realToFrac t) p'
 
-render :: Matrix (Complex Double) -> Matrix (Complex Double) -> Float -> SketchMonad ()
-render p p' t' = do
-    let t = if t' < 0 then 0.0 else if t' >= 200 then 1.0 else t'/200
-    Just program <- use shaderProgram
-    
-    let eigs = eigenvalues $ scale (1-realToFrac t) p + scale (realToFrac t) p'
+        GL.clearColor GL.$= GL.Color4 0.0 0.0 0.0 1
+        io $ GL.clear [GL.ColorBuffer]
 
-    GL.clearColor GL.$= GL.Color4 0.0 0.0 0.0 1
-    io $ GL.clear [GL.ColorBuffer]
+        let points = [GL.Vertex2 (0.04*realToFrac x) (0.04*realToFrac y) |
+                        x :+ y <- H.toList eigs] :: [GL.Vertex2 Float]
+        drawPoint "shader" (length points) "vPosition" points "pointSize" (2.0 :: Float)
 
-    let points = [GL.Vertex2 (0.04*realToFrac x) (0.04*realToFrac y) |
-                    x :+ y <- H.toList eigs] :: [GL.Vertex2 Float]
-    drawPoint program (length points) "vPosition" points "pointSize" (2.0 :: Float)
-
-    io GL.flush
+        io GL.flush
