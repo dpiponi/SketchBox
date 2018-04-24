@@ -271,7 +271,9 @@ gifLoop i n options render = do
     --withProgram $ \program -> io $ setShaderTime program interval
     render interval
     pixelData <- io $ (mallocForeignPtrArray (512*512*3) :: IO (ForeignPtr (PixelBaseComponent PixelRGB8)))
-    io $ writeGif 512 512 pixelData $ "xxx." ++ show (1500+i) ++ ".gif"
+    io $ withForeignPtr pixelData $ \ptr -> do
+        GL.readPixels (GL.Position 0 0) (GL.Size 512 512) $ GL.PixelData GL.RGB GL.UnsignedByte ptr
+        writeGif 512 512 pixelData $ "xxx." ++ show (1500+i) ++ ".gif"
     io $ SDL.glSwapWindow window
     events <- io SDL.pollEvents
     quit <- mapM handleUIEvent events

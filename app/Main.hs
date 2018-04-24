@@ -38,7 +38,7 @@ main = do
     let m = 200
 
     u' <- crand (num * 2)
-    let u = scale 0.5 u'
+    let u = scale 1.5 u'
 
     let d = initialPoints num
     let d' = finalPoints num
