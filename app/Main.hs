@@ -24,13 +24,13 @@ crand n = do
 unit :: Floating a => Int -> [a]
 unit n = [fromIntegral i/fromIntegral n | i <- [0..n-1]]
 
-initialPoints :: Int -> [Complex Double]
-initialPoints num = n ++ s where
+initialPoints :: Int -> Vector (Complex Double)
+initialPoints num = fromList (n ++ s) where
     n = [(-12.5+25*i) :+ (-20) | i <- unit num]
     s = [(-12.5+25*i) :+ 20 | i <- unit num]
 
-finalPoints :: Int -> [Complex Double]
-finalPoints num = e ++ w where
+finalPoints :: Int -> Vector (Complex Double)
+finalPoints num = fromList (e ++ w) where
     e = [(-20) :+ (-12.5+25*i) | i <- unit num]
     w = [20 :+ (-12.5+25*i) | i <- unit num]
 
@@ -42,8 +42,8 @@ main = do
     u' <- crand (num * 2)
     let u = scale 0.5 u'
 
-    let d = fromList $ initialPoints num
-    let d' = fromList $ finalPoints num
+    let d = initialPoints num
+    let d' = finalPoints num
 
     let p = diag d
     let p' = u `mul` diag d' `mul` inv u
