@@ -52,13 +52,13 @@ main = do
 
         let t = if time < 0 then 0.0 else if time >= 200 then 1.0 else time/200
         
-        let eigs = eigenvalues $ scale (1-realToFrac t) p + scale (realToFrac t) p'
+        let eigs = H.toList $ eigenvalues $ scale (1-realToFrac t) p + scale (realToFrac t) p'
 
         GL.clearColor GL.$= GL.Color4 0.0 0.0 0.0 1
         io $ GL.clear [GL.ColorBuffer]
 
         let points = [GL.Vertex2 (0.04*realToFrac x) (0.04*realToFrac y) |
-                        x :+ y <- H.toList eigs] :: [GL.Vertex2 Float]
+                        x :+ y <- eigs] :: [GL.Vertex2 Float]
         drawPoint "shader" (length points) "vPosition" points "pointSize" (2.0 :: Float)
 
         io GL.flush
