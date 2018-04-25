@@ -17,7 +17,7 @@ rrand :: Int -> IO (Matrix Double)
 rrand n = randn n n
 
 crand :: Int -> IO (Matrix (Complex Double))
-crand n = toComplex <$> ((,) <$> randn n n <*> randn n n)
+crand n = curry toComplex <$> randn n n <*> randn n n
 
 unit :: Floating a => Int -> [a]
 unit n = [fromIntegral i/fromIntegral n | i <- [0..n-1]]

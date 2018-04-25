@@ -254,8 +254,10 @@ loop options render = do
     quit <- mapM handleUIEvent events
     unless (or quit) $ loop options render
 
-writeGif :: Int -> Int -> ForeignPtr (PixelBaseComponent PixelRGB8) -> String -> IO ()
-writeGif width height pixelData filename = do
+writeGif :: Int32 -> Int32 -> ForeignPtr (PixelBaseComponent PixelRGB8) -> String -> IO ()
+writeGif width32 height32 pixelData filename = do
+    let width = fromIntegral width32
+    let height = fromIntegral height32
     let array = SV.unsafeFromForeignPtr0 pixelData (width*height*3) :: SV.Vector (PixelBaseComponent PixelRGB8)
     let image = Image width height array :: Image PixelRGB8
     let (im, pa) = palettize defaultPaletteOptions image
@@ -270,18 +272,18 @@ gifLoop i n options render = do
     --user going to set time in shader
     --withProgram $ \program -> io $ setShaderTime program interval
     render interval
-    pixelData <- io $ (mallocForeignPtrArray (512*512*3) :: IO (ForeignPtr (PixelBaseComponent PixelRGB8)))
+    (width, height) <- use windowSize
+    pixelData <- io $ (mallocForeignPtrArray (fromIntegral $ width*height*3) :: IO (ForeignPtr (PixelBaseComponent PixelRGB8)))
     io $ withForeignPtr pixelData $ \ptr -> do
-        GL.readPixels (GL.Position 0 0) (GL.Size 512 512) $ GL.PixelData GL.RGB GL.UnsignedByte ptr
-        writeGif 512 512 pixelData $ "xxx." ++ show (1500+i) ++ ".gif"
+        GL.readPixels (GL.Position 0 0) (GL.Size width height) $ GL.PixelData GL.RGB GL.UnsignedByte ptr
+        writeGif width height pixelData $ "xxx." ++ show (1500+i) ++ ".gif"
     io $ SDL.glSwapWindow window
     events <- io SDL.pollEvents
     quit <- mapM handleUIEvent events
     unless (or quit) $ gifLoop (i+1) n options render
 
 initSketch :: IO ()
-initSketch = do
-    SDL.initialize [SDL.InitVideo]
+initSketch = SDL.initialize [SDL.InitVideo]
 
 mainGifLoop :: (Float -> SketchMonad ()) -> IO ()
 mainGifLoop render = do
