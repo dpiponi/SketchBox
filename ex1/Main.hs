@@ -22,6 +22,6 @@ main = do
         GL.clearColor GL.$= GL.Color4 0.0 0.0 0.0 1
         io $ GL.clear [GL.ColorBuffer]
 
-        drawPoint "example1" 1 "vPosition" [GL.Vertex2 (cos t) (sin t)] "pointSize" (8.0 :: Float)
+        drawPoint "example1" "vPosition" [GL.Vertex2 (cos t) (sin t)] "pointSize" (8.0 :: Float)
 
         io GL.flush

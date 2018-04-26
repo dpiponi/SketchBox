@@ -56,13 +56,13 @@ $(makeLenses ''Options)
 type SketchMonad a = StateT World IO a
 
 class PointType a where
-    drawPoint' :: String -> SketchMonad () -> a
+    drawPoint' :: String -> Int -> (Int -> SketchMonad ()) -> a
 
 instance (a ~ ()) => PointType (SketchMonad a) where
-    drawPoint' name = id
+    drawPoint' name n s = s n
 
-drawPoint :: PointType a => String -> Int -> a
-drawPoint name n = drawPoint' name $ do
+drawPoint :: PointType a => String -> a
+drawPoint name = drawPoint' name 0 $ \n -> do
     programs <- use shaderProgram
     let Just program = M.lookup name programs
     GL.vertexProgramPointSize GL.$= GL.Enabled
@@ -74,7 +74,7 @@ drawPoint name n = drawPoint' name $ do
 
 -- Float array
 instance (PointType r) => PointType (String -> [Float] -> r) where
-    drawPoint' name s attr values = drawPoint' name $ do
+    drawPoint' name n s attr values = drawPoint' name n $ \n -> do
             programs <- use shaderProgram
             let Just program = M.lookup name programs
             loc <- get $ attribLocation program attr
@@ -82,22 +82,22 @@ instance (PointType r) => PointType (String -> [Float] -> r) where
             io $ withArray values $ \ptr ->
                 vertexAttribPointer loc GL.$=
                   (ToFloat, VertexArrayDescriptor 1 Float 0 ptr)
-            s
+            s (length values)
             vertexAttribArray loc GL.$= Disabled
 
 -- Uniform Float
 instance (PointType r) => PointType (String -> Float -> r) where
-    drawPoint' name s attr value = drawPoint' name $ do
+    drawPoint' name n s attr value = drawPoint' name n $ \n -> do
             programs <- use shaderProgram
             io $ print programs
             let Just program = M.lookup name programs
             loc <- get $ uniformLocation program attr
             uniform loc GL.$= value
-            s
+            s n
 
 -- Vector2 array
 instance (PointType r) => PointType (String -> [GL.Vertex2 Float] -> r) where
-    drawPoint' name s attr values = drawPoint' name $ do
+    drawPoint' name n s attr values = drawPoint' name n $ \n -> do
             programs <- use shaderProgram
             let Just program = M.lookup name programs
             loc <- get $ attribLocation program attr
@@ -105,16 +105,17 @@ instance (PointType r) => PointType (String -> [GL.Vertex2 Float] -> r) where
             io $ withArray values $ \ptr ->
                 vertexAttribPointer loc GL.$=
                   (ToFloat, VertexArrayDescriptor 2 Float 0 ptr)
-            s
+            s (length values)
             vertexAttribArray loc GL.$= Disabled
 
 -- Uniform vec2f
 instance (PointType r) => PointType (String -> GL.Vertex2 Float -> r) where
-    drawPoint' name s attr value = drawPoint' name $ do
+    drawPoint' name n s attr value = drawPoint' name n $ \n -> do
             programs <- use shaderProgram
             let Just program = M.lookup name programs
             loc <- get $ uniformLocation program attr
             uniform loc GL.$= value
+            s n
 
 drawLine :: GL.Program -> GL.Vertex2 Float -> GL.Vertex2 Float -> SketchMonad ()
 drawLine program p0 p1 = do
