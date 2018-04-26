@@ -41,7 +41,7 @@ library:
 executables:
   app:
     main:                Main.hs
-    source-dirs:         app
+    source-dirs:         examples/app
     ghc-options:
     - -threaded
     - -rtsopts
@@ -51,7 +51,7 @@ executables:
 
   ex1:
     main:                Main.hs
-    source-dirs:         ex1
+    source-dirs:         examples/ex1
     ghc-options:
     - -threaded
     - -rtsopts
