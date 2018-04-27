@@ -57,6 +57,7 @@ main = do
 
         let points = [GL.Vertex2 (0.04*realToFrac x) (0.04*realToFrac y) |
                         x :+ y <- eigs] :: [GL.Vertex2 Float]
-        drawPoint "shader" "vPosition" points "pointSize" (8.0 :: Float)
+        setUniform "shader" "pointSize" (8.0 :: Float)
+        drawPoint "shader" "vPosition" points
 
         io GL.flush

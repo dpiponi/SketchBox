@@ -55,15 +55,6 @@ $(makeLenses ''Options)
 
 type SketchMonad a = StateT World IO a
 
--- Points
-
-class PointType a where
-    drawPoint' :: Either String Program -> Maybe Int ->
-                  (Either String Program -> Maybe Int -> SketchMonad ()) -> a
-
-instance (a ~ ()) => PointType (SketchMonad a) where
-    drawPoint' program mn cont = cont program mn
-
 lookupProgram :: String -> SketchMonad Program
 lookupProgram name = do
     programs <- use shaderProgram
@@ -73,6 +64,46 @@ lookupProgram name = do
 lookupEsp :: Either String Program -> SketchMonad Program
 lookupEsp (Left name) = lookupProgram name
 lookupEsp (Right program) = return program
+
+-- Uniforms
+
+class UniformType a where
+    setUniform' :: Either String Program ->
+                  (Either String Program -> SketchMonad ()) -> a
+
+instance (a ~ ()) => UniformType (SketchMonad a) where
+    setUniform' program cont = cont program
+
+setUniform :: UniformType a => String -> a
+setUniform name = setUniform' (Left name) $ \esp -> do
+    program <- lookupEsp esp
+    currentProgram $= Just program
+
+-- Uniform Float
+instance (UniformType r) => UniformType (String -> Float -> r) where
+    setUniform' esp cont attr value = setUniform' esp $ \esp -> do
+        program <- lookupEsp esp
+        loc <- get $ uniformLocation program attr
+        uniform loc GL.$= value
+        cont esp
+
+-- Uniform vec2f
+instance (UniformType r) => UniformType (String -> GL.Vertex2 Float -> r) where
+    setUniform' esp cont attr value = setUniform' esp $ \esp -> do
+        program <- lookupEsp esp
+        loc <- get $ uniformLocation program attr
+        uniform loc GL.$= value
+        cont esp
+
+-- Points
+
+type PointOp a = Either String Program -> Maybe Int -> a
+
+class PointType a where
+    drawPoint' :: PointOp (PointOp (SketchMonad ()) -> a)
+
+instance (a ~ ()) => PointType (SketchMonad a) where
+    drawPoint' program mn cont = cont program mn
 
 drawPoint :: PointType a => String -> a
 drawPoint name = drawPoint' (Left name) Nothing $ \esp mn -> do
@@ -88,51 +119,27 @@ drawPoint name = drawPoint' (Left name) Nothing $ \esp mn -> do
 
 -- Float array
 instance (PointType r) => PointType (String -> [Float] -> r) where
-    drawPoint' esp mn cont attr values = drawPoint' esp mn $ \esp mn -> do
-        program <- lookupEsp esp
-        loc <- get $ attribLocation program attr
-        vertexAttribArray loc GL.$= Enabled
-        io $ withArray values $ \ptr ->
-            vertexAttribPointer loc GL.$=
-              (ToFloat, VertexArrayDescriptor 1 Float 0 ptr)
-        let nn = length values
-        if mn == Just nn || mn == Nothing
-            then do
-                cont esp (Just nn)
-                vertexAttribArray loc GL.$= Disabled
-            else error "Inconsistent array sizes when drawing points"
-
--- Uniform Float
-instance (PointType r) => PointType (String -> Float -> r) where
-    drawPoint' esp mn cont attr value = drawPoint' esp mn $ \esp mn -> do
-        program <- lookupEsp esp
-        loc <- get $ uniformLocation program attr
-        uniform loc GL.$= value
-        cont esp mn
+    drawPoint' = drawPoint'' 1
 
 -- Vector2 array
-instance (PointType r) => PointType (String -> [GL.Vertex2 Float] -> r) where
-    drawPoint' esp mn cont attr values = drawPoint' esp mn $ \esp mn -> do
-        program <- lookupEsp esp
-        loc <- get $ attribLocation program attr
-        vertexAttribArray loc GL.$= Enabled
-        io $ withArray values $ \ptr ->
-            vertexAttribPointer loc GL.$=
-              (ToFloat, VertexArrayDescriptor 2 Float 0 ptr)
-        let nn = length values
-        if mn == Just nn || mn == Nothing
-            then do
-                cont esp (Just nn)
-                vertexAttribArray loc GL.$= Disabled
-            else error "Inconsistent array sizes when drawing points"
+instance (PointType r, VertexAttribComponent a) => PointType (String -> [GL.Vertex2 a] -> r) where
+    drawPoint' = drawPoint'' 2
 
--- Uniform vec2f
-instance (PointType r) => PointType (String -> GL.Vertex2 Float -> r) where
-    drawPoint' esp n cont attr value = drawPoint' esp n $ \esp n -> do
-        program <- lookupEsp esp
-        loc <- get $ uniformLocation program attr
-        uniform loc GL.$= value
-        cont esp n
+drawPoint'' :: (PointType r, Storable a) =>
+    NumComponents -> PointOp (PointOp (SketchMonad ()) -> String -> [a] -> r)
+drawPoint'' size esp mn cont attr values = drawPoint' esp mn $ \esp mn -> do
+    program <- lookupEsp esp
+    loc <- get $ attribLocation program attr
+    vertexAttribArray loc GL.$= Enabled
+    io $ withArray values $ \ptr ->
+        vertexAttribPointer loc GL.$=
+          (ToFloat, VertexArrayDescriptor size Float 0 ptr)
+    let nn = length values
+    if mn == Just nn || mn == Nothing
+        then do
+            cont esp (Just nn)
+            vertexAttribArray loc GL.$= Disabled
+        else error "Inconsistent array sizes when drawing points"
 
 -- Lines
 

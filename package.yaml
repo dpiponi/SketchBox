@@ -35,8 +35,13 @@ dependencies:
 - containers
 - directory
 
+ghc-options:
+- -fwarn-missing-signatures
+
 library:
   source-dirs: src
+  ghc-options:
+  - -fwarn-missing-signatures
 
 executables:
   app:
