@@ -89,7 +89,7 @@ instance (UniformType r) => UniformType (String -> GL.Vertex2 Float -> r) where
         cont esp
 
 -- Lines
-
+{-
 drawLine :: GL.Program -> GL.Vertex2 Float -> GL.Vertex2 Float -> SketchMonad ()
 drawLine program p0 p1 = do
     let vertices = [p0, p1]
@@ -141,6 +141,7 @@ instance (LineType r) => LineType (String -> GL.Vertex2 Float -> GL.Vertex2 Floa
                   (ToFloat, VertexArrayDescriptor 2 Float 0 ptr)
             s
             vertexAttribArray loc GL.$= Disabled
+-}
 
 -- Some duplication here XXX
 init :: FilePath -> IO World

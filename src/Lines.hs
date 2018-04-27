@@ -1,0 +1,65 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE FlexibleInstances #-}
+
+module Lines where
+
+import Data.Int
+import Foreign
+import Data.Word
+import Data.Time
+import Control.Concurrent
+import Data.Fixed
+-- import Control.Monad.STM
+import qualified SDL
+import Prelude hiding (init)
+import Graphics.Rendering.OpenGL as GL
+import SDL.Vect
+import Control.Monad.Except
+import Sketch
+import GLCode
+
+type LineOp a = Either String Program -> Maybe Int -> a
+
+class LineType a where
+    drawLine' :: LineOp (LineOp (SketchMonad ()) -> a)
+
+instance (a ~ ()) => LineType (SketchMonad a) where
+    drawLine' program mn cont = cont program mn
+
+drawLine :: LineType a => String -> a
+drawLine name = drawLine' (Left name) Nothing $ \esp mn -> do
+    program <- lookupEsp esp
+    GL.blend GL.$= GL.Enabled
+    GL.blendFunc GL.$= (GL.SrcAlpha, GL.OneMinusSrcAlpha)
+    currentProgram $= Just program
+    case mn of
+        Just n -> io $ GL.drawArrays GL.Lines 0 (fromIntegral n)
+        Nothing -> error "Don't know array size when drawing lines"
+
+-- Float array
+instance (LineType r) => LineType (String -> [Float] -> r) where
+    drawLine' = drawLine'' 1
+
+-- Vector2 array
+instance (LineType r, VertexAttribComponent a) => LineType (String -> [GL.Vertex2 a] -> r) where
+    drawLine' = drawLine'' 2
+
+drawLine'' :: (LineType r, Storable a) =>
+    NumComponents -> LineOp (LineOp (SketchMonad ()) -> String -> [a] -> r)
+drawLine'' size esp0 mn0 cont attr values = drawLine' esp0 mn0 $ \esp1 mn1 -> do
+    program <- lookupEsp esp1
+    loc <- get $ attribLocation program attr
+    vertexAttribArray loc GL.$= Enabled
+    io $ withArray values $ \ptr ->
+        vertexAttribPointer loc GL.$=
+          (ToFloat, VertexArrayDescriptor size Float 0 ptr) -- ToFloat XXX
+    let nn = length values
+    if mn1 == Just nn || mn1 == Nothing
+        then do
+            cont esp1 (Just nn)
+            vertexAttribArray loc GL.$= Disabled
+        else error "Inconsistent array sizes when drawing lines"
