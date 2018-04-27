@@ -44,9 +44,9 @@ library:
   - -fwarn-missing-signatures
 
 executables:
-  app:
+  ex1:
     main:                Main.hs
-    source-dirs:         examples/app
+    source-dirs:         examples/ex1
     ghc-options:
     - -threaded
     - -rtsopts
@@ -54,9 +54,9 @@ executables:
     dependencies:
     - SketchBox
 
-  ex1:
+  ex2:
     main:                Main.hs
-    source-dirs:         examples/ex1
+    source-dirs:         examples/ex2
     ghc-options:
     - -threaded
     - -rtsopts
