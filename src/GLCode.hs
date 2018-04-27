@@ -14,8 +14,6 @@ import qualified Data.ByteString as B
 import Control.Exception
 import System.FilePath
 import Data.Int
-import Control.Monad.Writer
-import Control.Monad.State hiding (get)
 
 io :: MonadIO m => IO a -> m a
 io = liftIO
@@ -84,12 +82,12 @@ installShaders path = do
         if vertExists && fragExists
             then do
                 io $ putStrLn $ "Installing '" ++ filename ++ "'"
-                program <- runExceptT $ loadShaders [
+                eprogram <- runExceptT $ loadShaders [
                     ShaderInfo VertexShader vertPath,
                     ShaderInfo FragmentShader fragPath]
-                case program of
+                case eprogram of
                     Left e -> do
-                        io $ putStrLn $ "Failed " ++ filename
+                        io $ putStrLn $ "Failed " ++ filename ++ ": " ++ e
                         return []
                     Right program -> do
                         io $ putStrLn $ "Compiled " ++ filename
@@ -101,7 +99,6 @@ installShaders path = do
 
 compileProgram :: FilePath -> String -> IO Program
 compileProgram path name = do
-    print $ "prog"
     let vertexPath = joinPath [path, name ++ ".vert"]
     let fragmentPath = joinPath [path, name ++ ".frag"]
     print vertexPath
@@ -109,7 +106,6 @@ compileProgram path name = do
     Right program <- runExceptT $ loadShaders [
         ShaderInfo VertexShader vertexPath,
         ShaderInfo FragmentShader fragmentPath]
-    print $ "prog2"
 
     currentProgram $= Just program
     setShaderWindow program (512, 512)
@@ -142,9 +138,9 @@ setShaderMouse program (w, h) = do
 
 drawTriangle :: Vertex2 Float -> Vertex2 Float -> Vertex2 Float -> IO ()
 drawTriangle p0 p1 p2 = do
-    let vertices = [p0, p1, p2]
+    let verts = [p0, p1, p2]
     vertexAttribArray (AttribLocation 0) $= Enabled
-    withArray vertices $ \ptr ->
+    withArray verts $ \ptr ->
         vertexAttribPointer (AttribLocation 0) $=
           (ToFloat, VertexArrayDescriptor 2 Float 0 ptr)
     drawArrays Triangles 0 3

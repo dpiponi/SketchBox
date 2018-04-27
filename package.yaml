@@ -35,13 +35,10 @@ dependencies:
 - containers
 - directory
 
-ghc-options:
-- -fwarn-missing-signatures
-
 library:
   source-dirs: src
   ghc-options:
-  - -fwarn-missing-signatures
+  - -Wall
 
 executables:
   ex1:
@@ -51,6 +48,7 @@ executables:
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
+    - -Wall
     dependencies:
     - SketchBox
 
@@ -61,5 +59,6 @@ executables:
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
+    - -Wall
     dependencies:
     - SketchBox

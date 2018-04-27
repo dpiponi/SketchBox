@@ -2,14 +2,9 @@
 module Main where
 
 import qualified Graphics.Rendering.OpenGL as GL
-import qualified SDL
-import Numeric.LinearAlgebra.HMatrix as H hiding (reshape)
-import Data.Array as A
 import Prelude hiding (init)
-import Control.Monad.State as S
 import GLCode
-import Control.Lens
-import qualified Data.Map.Strict as M
+import Points
 
 import Sketch
 

@@ -2,14 +2,10 @@
 module Main where
 
 import qualified Graphics.Rendering.OpenGL as GL
-import qualified SDL
 import Numeric.LinearAlgebra.HMatrix as H hiding (reshape)
-import Data.Array as A
 import Prelude hiding (init)
-import Control.Monad.State as S
 import GLCode
-import Control.Lens
-import qualified Data.Map.Strict as M
+import Points
 
 import Sketch
 
@@ -20,22 +16,21 @@ crand :: Int -> IO (Matrix (Complex Double))
 crand n = curry toComplex <$> randn n n <*> randn n n
 
 unit :: Floating a => Int -> [a]
-unit n = [fromIntegral i/fromIntegral n | i <- [0..n-1]]
+unit n = [fromIntegral j/fromIntegral n | j <- [0..n-1]]
 
 initialPoints :: Int -> Vector (Complex Double)
 initialPoints num = fromList (n ++ s) where
-    n = [(-12.5+25*i) :+ (-20) | i <- unit num]
-    s = [(-12.5+25*i) :+ 20 | i <- unit num]
+    n = [(-12.5+25*j) :+ (-20) | j <- unit num]
+    s = [(-12.5+25*j) :+ 20 | j <- unit num]
 
 finalPoints :: Int -> Vector (Complex Double)
 finalPoints num = fromList (e ++ w) where
-    e = [(-20) :+ (-12.5+25*i) | i <- unit num]
-    w = [20 :+ (-12.5+25*i) | i <- unit num]
+    e = [(-20) :+ (-12.5+25*j) | j <- unit num]
+    w = [20 :+ (-12.5+25*j) | j <- unit num]
 
 main :: IO ()
 main = do
     let num = 20
-    let m = 200
 
     u' <- crand (num * 2)
     let u = scale 1.5 u'
