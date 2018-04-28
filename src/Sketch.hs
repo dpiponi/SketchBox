@@ -243,3 +243,21 @@ mainLoop render = do
     options <- initSketch
     world <- init (_shaderDirectory options)
     io $ evalStateT (loop options render) world
+
+loopState :: Options -> (Float -> StateT a (StateT World IO) ()) -> StateT a (StateT World IO) ()
+loopState options render = do
+    window <- lift $ use mainWindow
+    now <- io getCurrentTime
+    start <- lift (use startTime)
+    let interval = realToFrac (diffUTCTime now start)
+    render interval
+    io $ SDL.glSwapWindow window
+    events <- io SDL.pollEvents
+    quit <- lift $ mapM handleUIEvent events
+    unless (or quit) $ loopState options render
+
+mainLoopState :: a -> (Float -> StateT a (StateT World IO) ()) -> IO ()
+mainLoopState initial render = do
+    options <- initSketch
+    world <- init (_shaderDirectory options)
+    evalStateT (evalStateT (loopState options render) initial) world

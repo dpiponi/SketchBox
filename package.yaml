@@ -34,6 +34,7 @@ dependencies:
 - array
 - containers
 - directory
+- transformers
 
 library:
   source-dirs: src
