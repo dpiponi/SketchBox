@@ -4,19 +4,18 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Sketch where
 
--- import Numeric.LinearAlgebra.HMatrix as H hiding (reshape)
--- import Data.Array as A
 import Codec.Picture.ColorQuant
 import Codec.Picture.Gif
+import Numeric.LinearAlgebra.HMatrix as H hiding (reshape)
 import Codec.Picture.Types
 import Data.Int
 import Foreign
 import System.Environment
 import Data.Time
--- import Control.Monad.STM
 import qualified SDL
 import Prelude hiding (init)
 import Graphics.Rendering.OpenGL as GL
@@ -84,6 +83,25 @@ instance (UniformType r) => UniformType (String -> GL.Vertex2 Float -> r) where
         currentProgram $= Just program
         loc <- get $ uniformLocation program attr
         uniform loc GL.$= value
+        cont esp1
+
+-- Uniform mat4f
+instance (UniformType r) => UniformType (String -> GL.GLmatrix Float -> r) where
+    setUniform' esp0 cont attr value = setUniform' esp0 $ \esp1 -> do
+        program <- lookupEsp esp1
+        currentProgram $= Just program
+        loc <- get $ uniformLocation program attr
+        uniform loc GL.$= value
+        cont esp1
+
+-- Uniform mat4f
+instance (UniformType r) => UniformType (String -> H.Matrix Float -> r) where
+    setUniform' esp0 cont attr value = setUniform' esp0 $ \esp1 -> do
+        program <- lookupEsp esp1
+        currentProgram $= Just program
+        loc <- get $ uniformLocation program attr
+        matr <- io $ GL.newMatrix @GL.GLmatrix @Float GL.ColumnMajor $ concat $ H.toLists $ value
+        uniform loc GL.$= matr
         cont esp1
 
 -- Some duplication here XXX

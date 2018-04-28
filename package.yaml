@@ -2,9 +2,9 @@ name:                SketchBox
 version:             0.1.0.0
 github:              "githubuser/SketchBox"
 license:             BSD3
-author:              "Author name here"
-maintainer:          "example@example.com"
-copyright:           "2018 Author name here"
+author:              "Dan Piponi"
+maintainer:          "dpiponi@gmail.com"
+copyright:           "2018 Dan Piponi"
 
 extra-source-files:
 - README.md
@@ -66,6 +66,17 @@ executables:
   ex3:
     main:                Main.hs
     source-dirs:         examples/ex3
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -Wall
+    dependencies:
+    - SketchBox
+
+  ex4:
+    main:                Main.hs
+    source-dirs:         examples/ex4
     ghc-options:
     - -threaded
     - -rtsopts
