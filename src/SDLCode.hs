@@ -1,18 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module SDLCode where
 
 import SDL
-import SDL.Vect
-import Control.Lens
-import Control.Monad.State as S
-import Data.Int
 
 import qualified Graphics.Rendering.OpenGL as GL
 import Foreign.C.Types
-
-import GLCode
 
 openGLConfig :: OpenGLConfig
 openGLConfig = OpenGLConfig {

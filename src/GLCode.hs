@@ -1,7 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
 
 module GLCode where
 
@@ -31,7 +30,7 @@ compileAndCheck :: Shader -> ExceptT String IO ()
 compileAndCheck = checked compileShader compileStatus shaderInfoLog "compile"
 
 liftCatch :: (IOException -> e) -> IO a -> ExceptT e IO a
-liftCatch f m = ExceptT $ liftM (either (Left . f) Right) (try m)
+liftCatch f m = ExceptT $ fmap (either (Left . f) Right) (try m)
 
 loadCompileAttach :: Program -> [ShaderInfo] -> ExceptT String IO ()
 loadCompileAttach _ [] = return ()

@@ -1,24 +1,13 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE FlexibleInstances #-}
 
 module Lines where
 
-import Data.Int
 import Foreign
-import Data.Word
-import Data.Time
-import Control.Concurrent
-import Data.Fixed
--- import Control.Monad.STM
-import qualified SDL
-import Prelude hiding (init)
 import Graphics.Rendering.OpenGL as GL
-import SDL.Vect
-import Control.Monad.Except
+import Data.Maybe
 import Sketch
 import GLCode
 
@@ -37,7 +26,7 @@ drawLine name = drawLine' (Left name) Nothing $ \esp mn -> do
     GL.blendFunc GL.$= (GL.SrcAlpha, GL.OneMinusSrcAlpha)
     currentProgram $= Just program
     case mn of
-        Just n -> io $ GL.drawArrays GL.Lines 0 (fromIntegral n)
+        Just n -> io $ GL.drawArrays GL.LineStrip 0 (fromIntegral n)
         Nothing -> error "Don't know array size when drawing lines"
 
 -- Float array
@@ -58,7 +47,7 @@ drawLine'' size esp0 mn0 cont attr values = drawLine' esp0 mn0 $ \esp1 mn1 -> do
         vertexAttribPointer loc GL.$=
           (ToFloat, VertexArrayDescriptor size Float 0 ptr) -- ToFloat XXX
     let nn = length values
-    if mn1 == Just nn || mn1 == Nothing
+    if mn1 == Just nn || isNothing mn1
         then do
             cont esp1 (Just nn)
             vertexAttribArray loc GL.$= Disabled

@@ -1,39 +1,15 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE FlexibleInstances #-}
 
 module Points where
 
-import Codec.Picture.ColorQuant
-import Control.Monad
-import Codec.Picture.Gif
-import Codec.Picture.Types
-import Data.Int
+import Data.Maybe
 import Foreign
-import System.Environment
-import Data.Word
-import Data.Time
-import Control.Concurrent
-import Data.Fixed
--- import Control.Monad.STM
-import qualified SDL
-import Prelude hiding (init)
 import Graphics.Rendering.OpenGL as GL
-import SDL.Vect
-import Control.Monad.Except
-import Control.Monad.State as S hiding (get)
-import Control.Lens
-import qualified Data.Vector.Storable as SV
-import Data.Map.Strict as M
 import Sketch
-
-import System.FilePath
-
 import GLCode
-import SDLCode
 
 type PointOp a = Either String Program -> Maybe Int -> a
 
@@ -59,22 +35,26 @@ drawPoint name = drawPoint' (Left name) Nothing $ \esp mn -> do
 instance (PointType r) => PointType (String -> [Float] -> r) where
     drawPoint' = drawPoint'' 1
 
+-- A vector2
+instance (PointType r, VertexAttribComponent a) => PointType (String -> GL.Vertex2 a -> r) where
+    drawPoint' esp mn cont attr value = drawPoint'' 2 esp mn cont attr [value]
+
 -- Vector2 array
 instance (PointType r, VertexAttribComponent a) => PointType (String -> [GL.Vertex2 a] -> r) where
     drawPoint' = drawPoint'' 2
 
 drawPoint'' :: (PointType r, Storable a) =>
     NumComponents -> PointOp (PointOp (SketchMonad ()) -> String -> [a] -> r)
-drawPoint'' size esp mn cont attr values = drawPoint' esp mn $ \esp mn -> do
-    program <- lookupEsp esp
+drawPoint'' compSize esp0 mn0 cont attr values = drawPoint' esp0 mn0 $ \esp1 mn1 -> do
+    program <- lookupEsp esp1
     loc <- get $ attribLocation program attr
     vertexAttribArray loc GL.$= Enabled
     io $ withArray values $ \ptr ->
         vertexAttribPointer loc GL.$=
-          (ToFloat, VertexArrayDescriptor size Float 0 ptr) -- ToFloat XXX
+          (ToFloat, VertexArrayDescriptor compSize Float 0 ptr) -- ToFloat XXX
     let nn = length values
-    if mn == Just nn || mn == Nothing
+    if mn1 == Just nn || isNothing mn1
         then do
-            cont esp (Just nn)
+            cont esp1 (Just nn)
             vertexAttribArray loc GL.$= Disabled
-        else error "Inconsistent array sizes when drawing points"
+        else error "Inconsistent array compSizes when drawing points"
