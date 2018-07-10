@@ -85,3 +85,14 @@ executables:
     - -Wall
     dependencies:
     - SketchBox
+
+  ex5:
+    main:                Main.hs
+    source-dirs:         examples/ex5
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -Wall
+    dependencies:
+    - SketchBox

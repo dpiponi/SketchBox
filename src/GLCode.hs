@@ -8,7 +8,7 @@ import Control.Monad.Except
 import Data.List
 import System.Directory
 import Graphics.Rendering.OpenGL
-import Foreign.Marshal.Array
+-- import Foreign.Marshal.Array
 import qualified Data.ByteString as B
 import Control.Exception
 import System.FilePath
@@ -135,6 +135,7 @@ setShaderMouse program (w, h) = do
     loc <- uniformLocation program "iMouse"
     uniform loc $= Vector2 (i w) (i h::Float)
 
+{-
 drawTriangle :: Vertex2 Float -> Vertex2 Float -> Vertex2 Float -> IO ()
 drawTriangle p0 p1 p2 = do
     let verts = [p0, p1, p2]
@@ -144,6 +145,7 @@ drawTriangle p0 p1 p2 = do
           (ToFloat, VertexArrayDescriptor 2 Float 0 ptr)
     drawArrays Triangles 0 3
     vertexAttribArray (AttribLocation 0) $= Disabled
+-}
 
 -- http://snak.tdiary.net/20100209.html
 
