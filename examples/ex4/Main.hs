@@ -35,6 +35,15 @@ rotate theta = let c = cos theta
                              0.0, 0.0, 1.0, 0.0,
                              0.0, 0.0, 0.0, 1.0]
 
+translateBy :: Float -> Float -> Float -> StateT (Matrix Float) (StateT World IO) ()
+translateBy x y z = modify (translate x y z `mul`) 
+
+scaleBy :: Float -> StateT (Matrix Float) (StateT World IO) ()
+scaleBy s = modify (scale s s s `mul`)
+
+rotateBy :: Float -> StateT (Matrix Float) (StateT World IO) ()
+rotateBy s = modify (rotate s `mul`)
+
 main :: IO ()
 main = mainLoopState (ident @Float 4) $ \time -> do
 
@@ -52,10 +61,10 @@ main = mainLoopState (ident @Float 4) $ \time -> do
         modify (rotate (0.1*time) `mul`)
         replicateM_ 23 $ do
             let r = 10+5*sin (0.71*time)
-            modify (rotate (pi/r) `mul`)
+            rotateBy (pi/r)
             let s = sin (0.9*time)
-            modify (scale s s s `mul`)
-            modify (translate 0.01 0.02 0.0 `mul`)
+            scaleBy s
+            translateBy 0.01 0.01 0.0
             transform <- get
 
             lift $ setUniform "turtle"

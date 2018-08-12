@@ -67,9 +67,12 @@ setTransform = do
 
 arrow :: Float -> SketchMonad ()
 arrow theta = do
-    rectangle 0.05 0.01
+    rectangle 0.1 0.02
+    drawTriangle "turtle"
+        "vPosition" [v2f 0.05 (-0.02), v2f 0.1 0, v2f 0.05 0.02]
 
-grid :: (MonadState (Matrix Float) m) => Int -> Int -> Float -> Float -> m () -> m ()
+grid :: (MonadState (Matrix Float) m) =>
+        Int -> Int -> Float -> Float -> m () -> m ()
 grid m n dx dy f =
     forM_ [0..(m-1)] $ \i ->
         forM_ [0..(n-1)] $ \j -> save $ do
@@ -94,10 +97,10 @@ main = mainLoopState (ident @Float 4) $ \time -> do
 
         modify (rotation (0.1*time) `mul`)
 
-        grid 10 10 0.1 0.1 $ do
+        grid 5 5 0.2 0.2 $ do
             transform <- get
             lift $ setUniform "turtle"
-                       "transform" transform
+                              "transform" transform
             lift $ arrow 0
 --         replicateM_ 23 $ do
 --             let r = 10+5*sin (0.71*time)
