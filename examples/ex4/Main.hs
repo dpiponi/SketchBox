@@ -45,7 +45,7 @@ rotateBy :: Float -> StateT (Matrix Float) (StateT World IO) ()
 rotateBy s = modify (rotate s `mul`)
 
 main :: IO ()
-main = mainLoopState (ident @Float 4) $ \time -> do
+main = mainLoopState 1 (ident @Float 4) $ \time -> do
 
         put (ident @Float 4)
 

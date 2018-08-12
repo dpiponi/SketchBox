@@ -10,7 +10,7 @@ v2f :: Real a => a -> a -> GL.Vertex2 Float
 v2f x y = GL.Vertex2 (realToFrac x) (realToFrac y)
 
 main :: IO ()
-main = mainLoop $ \time -> do
+main = mainLoop 1 $ \time -> do
 --main = mainGifLoop "lissa.gif" 12.0 0 1000 $ \time -> do
 
         let t = 5*realToFrac time :: Float

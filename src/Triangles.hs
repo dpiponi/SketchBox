@@ -37,6 +37,14 @@ instance (TriangleType r) => TriangleType (String -> [Float] -> r) where
 instance (TriangleType r, VertexAttribComponent a) => TriangleType (String -> [GL.Vertex2 a] -> r) where
     drawTriangle' = drawTriangle'' 2
 
+-- Vector3 array
+instance (TriangleType r, VertexAttribComponent a) => TriangleType (String -> [GL.Vertex3 a] -> r) where
+    drawTriangle' = drawTriangle'' 3
+
+-- Vector4 array
+instance (TriangleType r, VertexAttribComponent a) => TriangleType (String -> [GL.Vertex4 a] -> r) where
+    drawTriangle' = drawTriangle'' 4
+
 drawTriangle'' :: (TriangleType r, Storable a) =>
     NumComponents -> TriangleOp (TriangleOp (SketchMonad ()) -> String -> [a] -> r)
 drawTriangle'' size esp0 mn0 cont attr values = drawTriangle' esp0 mn0 $ \esp1 mn1 -> do

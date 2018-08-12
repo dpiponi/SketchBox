@@ -41,7 +41,7 @@ main = do
     let p = diag d
     let p' = u `mul` diag d' `mul` inv u
 
-    mainGifLoop "xxx" 12.0 0 100 $ \time -> do
+    mainGifLoop "xxx" 12.0 1 0 100 $ \time -> do
         let t = time/200
         
         let eigs = H.toList $ eigenvalues $ scale (1-realToFrac t) p + scale (realToFrac t) p'
