@@ -24,11 +24,11 @@ lerp :: Float -> Float -> Float -> Float
 lerp a b x = (1-x)*a+x*b
 
 linstep :: Float -> Float -> Float -> Float
-linstep a b x = clamp 0.0 1.0 ((x-a)/(x-b))
+linstep a b x = clamp 0.0 1.0 ((x-a)/(b-a))
 
 smoothstep :: Float -> Float -> Float -> Float
 smoothstep a b x =
-    let t = clamp 0.0 1.0 ((x-a)/(x-b))
+    let t = clamp 0.0 1.0 ((x-a)/(b-a))
     in t*t*(3.0-2.0*t)
 
 v2f :: Real a => a -> a -> GL.Vertex2 Float
@@ -148,15 +148,16 @@ coolwarm :: Float -> Float -> Float -> GL.Vertex4 Float
 coolwarm a b x = 
     let mid = 0.5*(a+b)
     in if x > mid
-        then let t = linstep mid b x in v4f 1.0 (1.0-t) (1.0-t) 1.0
-        else let t = linstep mid a x in v4f (1.0-t) (1.0-t) 1.0 1.0
+        then let t = smoothstep mid b x in v4f 1.0 (1.0-t) (1.0-t) 1.0
+        else let t = smoothstep mid a x in v4f (1.0-t) (1.0-t) 1.0 1.0
 
 main :: IO ()
-main = mainLoopState 16 (ident @Float 4) $ \time -> do
+main = do
+    mainLoopState 16 (ident @Float 4) $ \time -> do
 
         put (ident @Float 4)
 
---         let t = 5*realToFrac time :: Float
+    --         let t = 5*realToFrac time :: Float
 
         GL.clearColor GL.$= GL.Color4 1.0 1.0 1.0 1
         io $ GL.clear [GL.ColorBuffer]
@@ -166,30 +167,9 @@ main = mainLoopState 16 (ident @Float 4) $ \time -> do
         GL.hint GL.LineSmooth GL.$= GL.Nicest
         GL.multisample GL.$= GL.Enabled
 
-        -- modify (rotation (0.1*time) `mul`)
-
-        let a = array ((0, 0), (4, 4)) [((i, j), 0.2*time*fromIntegral i) | i <- [0..4], j <- [0..4]]
-        let b = array ((0, 0), (4, 4)) [((i, j), 0.5*fromIntegral (i-j)) | i <- [0..4], j <- [0..4]]
+        let a = array ((0, 0), (9, 9)) [((i, j), 0.2*time*fromIntegral i) | i <- [0..9], j <- [0..9]]
+        let p = array ((0, 0), (9, 9)) [((i, j), 0.5*fromIntegral (i-j)) | i <- [0..9], j <- [0..9]]
                           
-        drawDensityField (coolwarm (-0.5) 0.5) 4 4 0.2 0.2 b
-        drawVectorField 5 5 0.2 0.2 a
-
---                 let theta = 0.2*time*fromIntegral i
---                 modify ((rotation theta) `mul`)
---                 transform <- get
---                 lift $ setUniform "turtle"
---                                   "transform" transform
---                 lift $ arrow 0
---         replicateM_ 23 $ do
---             let r = 10+5*sin (0.71*time)
---             modify (rotation (pi/r) `mul`)
---             let s = sin (0.9*time)
---             modify (scaling s s s `mul`)
---             modify (translation 0.01 0.02 0.0 `mul`)
---             transform <- get
--- 
---             lift $ setUniform "turtle"
---                        "transform" transform
---             lift $ arrow
--- 
---             io GL.flush
+        translate (-0.9) (-0.9) 0.0
+        drawDensityField (coolwarm (-0.45) 0.45) 9 9 0.2 0.2 p
+        drawVectorField 10 10 0.2 0.2 a
