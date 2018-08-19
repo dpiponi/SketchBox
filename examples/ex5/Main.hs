@@ -55,8 +55,8 @@ scaling x y z = (4 >< 4) [ x  , 0.0, 0.0, 0.0,
 rotation :: (Fractional a, Storable a, Floating a) => a -> Matrix a
 rotation theta = let c = cos theta
                      s = sin theta
-                 in (4 >< 4) [ c, -s, 0.0, 0.0,
-                               s, c, 0.0, 0.0,
+                 in (4 >< 4) [ c, s, 0.0, 0.0,
+                               -s, c, 0.0, 0.0,
                                0.0, 0.0, 1.0, 0.0,
                                0.0, 0.0, 0.0, 1.0]
 
@@ -103,10 +103,11 @@ setTransform = do
                "transform" transform
 
 arrow :: Float -> SketchMonad ()
-arrow theta = do
-    constRectangle 0.1 0.02
+arrow r = do
+    let thickness = 0.01
+    constRectangle r thickness
     drawTriangle "turtle"
-        "vPosition" [v2f 0.05 (-0.02), v2f 0.1 0, v2f 0.05 0.02]
+        "vPosition" [v2f (0.5*r) (-0.02), v2f (0.5*r+0.05) 0, v2f (0.5*r) 0.02]
         "color" [v4f 0.0 0.0 0.0 1.0, v4f 0.0 0.0 0.0 1.0,
                  v4f 0.0 0.0 0.0 1.0]
 
@@ -123,15 +124,17 @@ grid m n dx dy f =
             f i j
 
 --drawVectorField :: Int -> Int -> Float -> Float -> (Array (Int, Int) Float)
-drawVectorField m n dx dy a =
+drawVectorField m n dx dy v =
     grid m n dx dy $ \i j -> do
-        let theta = a!(i, j)
+        let (vx, vy) = v!(i, j)
+        let theta = atan2 vy vx
+        let r = sqrt (vx*vx+vy*vy)
         save $ do
             modify ((rotation theta) `mul`)
             transform <- get
             lift $ setUniform "turtle"
                               "transform" transform
-            lift $ arrow 0
+            lift $ arrow r
 
 type ColorMap = Float -> GL.Vertex4 Float
 
@@ -151,6 +154,38 @@ coolwarm a b x =
         then let t = smoothstep mid b x in v4f 1.0 (1.0-t) (1.0-t) 1.0
         else let t = smoothstep mid a x in v4f (1.0-t) (1.0-t) 1.0 1.0
 
+-- Interpolate velocity onto uniform grid from staggered grid
+interpVelocity :: Array (Int, Int) Float -> Array (Int, Int) Float -> Array (Int, Int) (Float, Float)
+interpVelocity vx vy =
+    let (_, (nx, ny)) = bounds vx
+    in array ((0, 0), (nx, ny)) [((i, j), (0.5*(vx!(ip, j)+vx!(i, j)), 0.5*(vy!(i, jp)+vy!(i, j)))) |
+                                 i <- [0..nx],
+                                 j <- [0..ny],
+                                 let ip = (i+1) `mod` (nx+1),
+                                 let jp = (j+1) `mod` (ny+1)]
+
+divergence :: Array (Int, Int) Float -> Array (Int, Int) Float -> Array (Int, Int) (Float, Float)
+divergence vx vy =
+    let (_, (nx, ny)) = bounds vx
+    in array ((0, 0), (nx, ny)) [((i, j), (vx!(ip, j)-vx!(i, j), vy!(i, jp)-vy!(i, j))) |
+                                 i <- [0..nx],
+                                 j <- [0..ny],
+                                 let ip = (i+1) `mod` (nx+1),
+                                 let jp = (j+1) `mod` (ny+1)]
+
+grad :: Array (Int, Int) Float -> (Array (Int, Int) Float, Array (Int, Int) Float)
+grad p =
+    let (_, (nx, ny)) = bounds p
+        vx = array ((0, 0), (nx, ny)) [((i, j), p!(ip, j)-p!(i, j)) |
+                                      i <- [0..nx],
+                                      j <- [0..ny],
+                                      let ip = (i+1) `mod` (nx+1)]
+        vy = array ((0, 0), (nx, ny)) [((i, j), p!(i, jp)-p!(i, j)) |
+                                      i <- [0..nx],
+                                      j <- [0..ny],
+                                      let jp = (j+1) `mod` (ny+1)]
+    in (vx, vy)
+
 main :: IO ()
 main = do
     mainLoopState 16 (ident @Float 4) $ \time -> do
@@ -167,9 +202,13 @@ main = do
         GL.hint GL.LineSmooth GL.$= GL.Nicest
         GL.multisample GL.$= GL.Enabled
 
-        let a = array ((0, 0), (9, 9)) [((i, j), 0.2*time*fromIntegral i) | i <- [0..9], j <- [0..9]]
-        let p = array ((0, 0), (9, 9)) [((i, j), 0.5*fromIntegral (i-j)) | i <- [0..9], j <- [0..9]]
+        let a = array ((0, 0), (19, 19)) [((i, j), (0.1*cos(0.2*time*fromIntegral i), 0.1*sin(0.2*time*fromIntegral i))) | i <- [0..19], j <- [0..19]]
+        let p = array ((0, 0), (19, 19)) [((i, j), 0.1*0.5*fromIntegral (i-j)) | i <- [0..19], j <- [0..19]]
                           
         translate (-0.9) (-0.9) 0.0
-        drawDensityField (coolwarm (-0.45) 0.45) 9 9 0.2 0.2 p
-        drawVectorField 10 10 0.2 0.2 a
+        drawDensityField (coolwarm (-0.45) 0.45) 19 19 0.1 0.1 p
+        let (vx, vy) = grad p
+        let v = interpVelocity vx vy
+        drawVectorField 20 20 0.1 0.1 v
+
+        return ()
