@@ -141,11 +141,13 @@ type ColorMap = Float -> GL.Vertex4 Float
 drawDensityField :: ColorMap -> Int -> Int -> Float -> Float -> Array (Int, Int) Float -> StateT (Matrix Float) (StateT World IO) ()
 drawDensityField cmap m n dx dy a =
     grid m n dx dy $ \i j -> do
-    lift $ drawTriangle "turtle"
-                        "vPosition" [v2f 0.0 0.0, v2f dx 0.0, v2f dx dy,
-                                     v2f 0.0 0.0, v2f dx dy, v2f 0.0 dy]
-                        "color"     [cmap (a!(i, j)), cmap (a!(i+1, j)), cmap (a!(i+1, j+1)),
-                                     cmap (a!(i, j)), cmap (a!(i+1, j+1)), cmap (a!(i, j+1))]
+        let ip = (i+1) `mod` m
+        let jp = (j+1) `mod` m
+        lift $ drawTriangle "turtle"
+                            "vPosition" [v2f 0.0 0.0, v2f dx 0.0, v2f dx dy,
+                                         v2f 0.0 0.0, v2f dx dy, v2f 0.0 dy]
+                            "color"     [cmap (a!(i, j)), cmap (a!(ip, j)), cmap (a!(ip, jp)),
+                                         cmap (a!(i, j)), cmap (a!(ip, jp)), cmap (a!(i, jp))]
 
 coolwarm :: Float -> Float -> Float -> GL.Vertex4 Float
 coolwarm a b x = 
@@ -202,13 +204,13 @@ main = do
         GL.hint GL.LineSmooth GL.$= GL.Nicest
         GL.multisample GL.$= GL.Enabled
 
-        let a = array ((0, 0), (19, 19)) [((i, j), (0.1*cos(0.2*time*fromIntegral i), 0.1*sin(0.2*time*fromIntegral i))) | i <- [0..19], j <- [0..19]]
-        let p = array ((0, 0), (19, 19)) [((i, j), 0.1*0.5*fromIntegral (i-j)) | i <- [0..19], j <- [0..19]]
+--         let a = array ((0, 0), (19, 19)) [((i, j), (0.1*cos(0.2*time*fromIntegral i), 0.1*sin(0.2*time*fromIntegral i))) | i <- [0..19], j <- [0..19]]
+        let p = array ((0, 0), (19, 19)) [((i, j), 0.5*cos (0.5*time+2.0*2*pi*(fromIntegral i/20))) | i <- [0..19], j <- [0..19]]
                           
         translate (-0.9) (-0.9) 0.0
-        drawDensityField (coolwarm (-0.45) 0.45) 19 19 0.1 0.1 p
+        drawDensityField (coolwarm (-0.45) 0.45) 20 20 0.1 0.1 p
         let (vx, vy) = grad p
-        let v = interpVelocity vx vy
+        let v = fmap (\(x, y) -> (0.1*x, 0.1*y)) $ interpVelocity vx vy
         drawVectorField 20 20 0.1 0.1 v
 
         return ()
