@@ -37,6 +37,14 @@ instance (LineType r) => LineType (String -> [Float] -> r) where
 instance (LineType r, VertexAttribComponent a) => LineType (String -> [GL.Vertex2 a] -> r) where
     drawLine' = drawLine'' 2
 
+-- Vector3 array
+instance (LineType r, VertexAttribComponent a) => LineType (String -> [GL.Vertex3 a] -> r) where
+    drawLine' = drawLine'' 3
+
+-- Vector4 array
+instance (LineType r, VertexAttribComponent a) => LineType (String -> [GL.Vertex4 a] -> r) where
+    drawLine' = drawLine'' 4
+
 drawLine'' :: (LineType r, Storable a) =>
     NumComponents -> LineOp (LineOp (SketchMonad ()) -> String -> [a] -> r)
 drawLine'' size esp0 mn0 cont attr values = drawLine' esp0 mn0 $ \esp1 mn1 -> do

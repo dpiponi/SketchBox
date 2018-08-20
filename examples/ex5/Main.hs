@@ -11,7 +11,7 @@ import Foreign.Storable
 import GLCode
 import Sketch
 -- import Points
--- import Lines
+import Lines
 import Triangles
 import Data.Array
 
@@ -66,6 +66,12 @@ rectangle w h = do
         "vPosition" (rectangleVertices w h)
         "color" [v4f 1.0 0.0 0.0 1.0, v4f 0.0 1.0 0.0 1.0, v4f 0.0 0.0 1.0 1.0,
                  v4f 1.0 0.0 0.0 1.0, v4f 0.0 1.0 0.0 1.0, v4f 0.0 0.0 1.0 1.0]
+
+drawPath :: [(Float, Float)] -> SketchMonad ()
+drawPath vs = do    
+    drawLine "turtle"
+        "vPosition" (map (uncurry v2f) vs)
+        "color" (replicate (length vs) (v4f 0.0 0.0 0.0 1.0))
 
 constRectangle :: Float -> Float -> SketchMonad ()
 constRectangle w h = do
@@ -205,12 +211,14 @@ main = do
         GL.multisample GL.$= GL.Enabled
 
 --         let a = array ((0, 0), (19, 19)) [((i, j), (0.1*cos(0.2*time*fromIntegral i), 0.1*sin(0.2*time*fromIntegral i))) | i <- [0..19], j <- [0..19]]
-        let p = array ((0, 0), (19, 19)) [((i, j), 0.5*cos (0.5*time+2.0*2*pi*(fromIntegral i/20))) | i <- [0..19], j <- [0..19]]
+        let p = array ((0, 0), (19, 19)) [((i, j), 0.5*cos (0.5*time+1.0*2*pi*(fromIntegral i/20))) | i <- [0..19], j <- [0..19]]
                           
-        translate (-0.9) (-0.9) 0.0
+        translate (-1.0) (-1.0) 0.0
         drawDensityField (coolwarm (-0.45) 0.45) 20 20 0.1 0.1 p
         let (vx, vy) = grad p
         let v = fmap (\(x, y) -> (0.1*x, 0.1*y)) $ interpVelocity vx vy
         drawVectorField 20 20 0.1 0.1 v
+
+        lift $ drawPath [(x, y) | i <- [0..10], let x = 0.1*fromIntegral i, let y = x*x]
 
         return ()
