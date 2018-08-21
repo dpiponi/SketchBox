@@ -136,17 +136,17 @@ grid m n dx dy f =
             f i j
 
 --drawVectorField :: Int -> Int -> Float -> Float -> (Array (Int, Int) Float)
-drawVectorField m n dx dy v =
-    grid m n dx dy $ \i j -> do
-        let (vx, vy) = v!(i, j)
-        let theta = atan2 vy vx
-        let r = sqrt (vx*vx+vy*vy)
-        save $ do
-            modify ((rotation theta) `mul`)
-            transform <- get
-            lift $ setUniform "turtle"
-                              "transform" transform
-            lift $ arrow r
+drawVectorField m n dx dy vx vy = drawVectorField' m n dx dy $ interpVelocityField vx vy
+--     grid m n dx dy $ \i j -> do
+--         let (vx, vy) = v!(i, j)
+--         let theta = atan2 vy vx
+--         let r = sqrt (vx*vx+vy*vy)
+--         save $ do
+--             modify ((rotation theta) `mul`)
+--             transform <- get
+--             lift $ setUniform "turtle"
+--                               "transform" transform
+--             lift $ arrow r
 
 drawVectorField' m n dx dy f =
     grid m n dx dy $ \i j -> do
@@ -255,7 +255,7 @@ main = do
         drawDensityField (coolwarm (-0.45) 0.45) 20 20 0.1 0.1 p
         let (vx, vy) = grad p
         let v = fmap (\(x, y) -> (0.1*x, 0.1*y)) $ interpVelocity vx vy
-        drawVectorField' 20 20 0.1 0.1 $ interpVelocityField vx vy
+        drawVectorField 20 20 0.1 0.1 vx vy
 
 --         lift $ drawPath [(x, y) | i <- [0..10], let x = 0.1*fromIntegral i, let y = x*x]
 
