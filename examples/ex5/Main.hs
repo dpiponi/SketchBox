@@ -68,17 +68,17 @@ rectangle w h = do
         "color" [v4f 1.0 0.0 0.0 1.0, v4f 0.0 1.0 0.0 1.0, v4f 0.0 0.0 1.0 1.0,
                  v4f 1.0 0.0 0.0 1.0, v4f 0.0 1.0 0.0 1.0, v4f 0.0 0.0 1.0 1.0]
 
-drawPath :: [(Float, Float)] -> SketchMonad ()
-drawPath vs = do    
+drawPath :: (Float, Float, Float) -> [(Float, Float)] -> SketchMonad ()
+drawPath (r, g, b) vs = do    
     drawLine "turtle"
         "vPosition" (map (uncurry v2f) vs)
-        "color" (replicate (length vs) (v4f 0.0 0.0 0.0 1.0))
+        "color" (replicate (length vs) (v4f r g b 1.0))
 
-plotPath :: Int -> (Float -> (Float, Float)) -> Float -> Float -> SketchMonad ()
-plotPath n f t0 t1 = do
+plotPath :: (Float, Float, Float) -> Int -> (Float -> (Float, Float)) -> Float -> Float -> SketchMonad ()
+plotPath rgb n f t0 t1 = do
     let scale = (t1-t0)/fromIntegral n
-    drawPath [f t | i <- [0..n],
-                    let t = t0+scale*fromIntegral i]
+    drawPath rgb [f t | i <- [0..n],
+                        let t = t0+scale*fromIntegral i]
 
 constRectangle :: Float -> Float -> SketchMonad ()
 constRectangle w h = do
@@ -284,6 +284,6 @@ main = do
         forM_ [-5.0, -3.0..5.0] $ \x -> do
             forM_ [-5.0, -3.0..5.0] $ \y -> do
                 let curve = integrate (interpVelocityField vx vy) (10+x) (10+y) 500 0.1
-                lift $ drawPath [(0.1*u, 0.1*v) | (u, v) <- curve]
+                lift $ drawPath (0.25, 1.0, 0.25) [(0.1*u, 0.1*v) | (u, v) <- curve]
 
         return ()
