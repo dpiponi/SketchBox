@@ -14,6 +14,7 @@ import Sketch
 import Lines
 import Triangles
 import Data.Array
+import Debug.Trace
 
 clamp :: Float -> Float -> Float -> Float
 clamp a b x | x < a = a
@@ -135,18 +136,7 @@ grid m n dx dy f =
             setTransform
             f i j
 
---drawVectorField :: Int -> Int -> Float -> Float -> (Array (Int, Int) Float)
 drawVectorField m n dx dy vx vy = drawVectorField' m n dx dy $ interpVelocityField vx vy
---     grid m n dx dy $ \i j -> do
---         let (vx, vy) = v!(i, j)
---         let theta = atan2 vy vx
---         let r = sqrt (vx*vx+vy*vy)
---         save $ do
---             modify ((rotation theta) `mul`)
---             transform <- get
---             lift $ setUniform "turtle"
---                               "transform" transform
---             lift $ arrow r
 
 drawVectorField' m n dx dy f =
     grid m n dx dy $ \i j -> do
@@ -196,18 +186,37 @@ interpVelocity vx vy =
                                  let jp = (j+1) `mod` (ny+1)]
 
 interpVelocityField :: Array (Int, Int) Float -> Array (Int, Int) Float -> Float -> Float -> (Float, Float)
-interpVelocityField vx vy x0 y0 =
-    let (_, (nx, ny)) = bounds vx
-        x = x0+0.5
-        y = y0+0.5
-        ix = floor x
-        iy = floor y
+interpVelocityField vx vy x y =
+    (interpScalarField vx (x+0.5) y, interpScalarField vy x (y+0.5))
+--     let (_, (nx, ny)) = bounds vx
+--         x = x0+0.5
+--         y = y0+0.5
+--         ix = floor x `mod` nx
+--         iy = floor y `mod` ny
+--         ixp = (ix+1) `mod` nx
+--         iyp = (iy+1) `mod` ny
+--         fx = x-fromIntegral ix
+--         fy = y-fromIntegral iy
+--         vx00 = lerp (vx!(ix, iy)) (vy!(ixp, iy))
+--     in (lerp (vx!(ix, iy)) (vx!(ixp, iy)) fx,
+--         lerp (vy!(ix, iy)) (vy!(ix, iyp)) fy)
+
+interpScalarField :: Array (Int, Int) Float -> Float -> Float -> Float
+interpScalarField p x y =
+    let (_, (nx, ny)) = bounds p
+        ix = floor x `mod` nx
+        iy = floor y `mod` ny
         ixp = (ix+1) `mod` nx
         iyp = (iy+1) `mod` ny
         fx = x-fromIntegral ix
         fy = y-fromIntegral iy
-    in (lerp (vx!(ix, iy)) (vx!(ixp, iy)) fx,
-        lerp (vy!(ix, iy)) (vy!(ix, iyp)) fy)
+        p00 = p!(ix, iy)
+        p01 = p!(ix, iyp)
+        p10 = p!(ixp, iy)
+        p11 = p!(ixp, iyp)
+        p0 = lerp p00 p01 fy
+        p1 = lerp p10 p11 fy
+    in lerp p0 p1 fx
 
 divergence :: Array (Int, Int) Float -> Array (Int, Int) Float -> Array (Int, Int) (Float, Float)
 divergence vx vy =
@@ -231,6 +240,12 @@ grad p =
                                       let iyp = (iy+1) `mod` (ny+1)]
     in (vx, vy)
 
+integrate :: (Float -> Float -> (Float, Float)) -> Float -> Float -> Int -> Float -> [(Float, Float)]
+integrate v x y 0 dt = []
+integrate v x y n dt = (x, y) : 
+    let (vx, vy) = v x y
+    in integrate v (x+dt*vx) (y+dt*vy) (n-1) dt
+
 main :: IO ()
 main = do
     mainLoopState 16 (ident @Float 4) $ \time -> do
@@ -246,8 +261,9 @@ main = do
         GL.lineWidth GL.$= 2
         GL.hint GL.LineSmooth GL.$= GL.Nicest
         GL.multisample GL.$= GL.Enabled
-
-        let p = array ((0, 0), (19, 19)) [((ix, iy), 0.5*cos (0.5*time+1.0*2*pi*(fromIntegral ix/20))) |
+ 
+        let p = array ((0, 0), (19, 19)) [((ix, iy), 0.25*cos (-0.75*time+2.0*pi*fromIntegral (ix+iy)/10)+
+                                                     0.25*sin (0.5*time+3.0*2*pi*(fromIntegral (ix-iy)/20))) |
                                           ix <- [0..19],
                                           iy <- [0..19]]
                           
@@ -255,13 +271,19 @@ main = do
         drawDensityField (coolwarm (-0.45) 0.45) 20 20 0.1 0.1 p
         let (vx, vy) = grad p
         let v = fmap (\(x, y) -> (0.1*x, 0.1*y)) $ interpVelocity vx vy
-        drawVectorField 20 20 0.1 0.1 vx vy
+--         drawVectorField 20 20 0.1 0.1 vx vy
 
 --         lift $ drawPath [(x, y) | i <- [0..10], let x = 0.1*fromIntegral i, let y = x*x]
 
         let f t = (t, 0.25*t*t)
         let time' = 0.3*time
         let d = 3*(time'-fromIntegral @Int (floor time'))
-        lift $ plotPath 100 f 0 d
+--         lift $ plotPath 100 f 0 d
+--        let curve = integrate (\x y ->let (u,v)=interpVelocityField vx vy x y in (10*u,10*v)) 0 0 100 0.01
+--         let curve = integrate (\x y ->let (u,v)=interpVelocityField vx vy x y in (u,v)) 1.0 1.0 300 0.01
+        forM_ [-5.0, -3.0..5.0] $ \x -> do
+            forM_ [-5.0, -3.0..5.0] $ \y -> do
+                let curve = integrate (interpVelocityField vx vy) (10+x) (10+y) 500 0.1
+                lift $ drawPath [(0.1*u, 0.1*v) | (u, v) <- curve]
 
         return ()
