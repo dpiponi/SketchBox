@@ -246,6 +246,12 @@ integrate v x y n dt = (x, y) :
     let (vx, vy) = v x y
     in integrate v (x+dt*vx) (y+dt*vy) (n-1) dt
 
+duringAndAfter :: Monad m => Float -> Float -> Float -> (Float -> m ()) -> m ()
+duringAndAfter t t0 t1 m = 
+    if t < t0
+        then return ()
+        else m ((t-t0)/(t1-t0))
+
 main :: IO ()
 main = do
     mainLoopState 16 (ident @Float 4) $ \time -> do
@@ -281,9 +287,10 @@ main = do
 --         lift $ plotPath 100 f 0 d
 --        let curve = integrate (\x y ->let (u,v)=interpVelocityField vx vy x y in (10*u,10*v)) 0 0 100 0.01
 --         let curve = integrate (\x y ->let (u,v)=interpVelocityField vx vy x y in (u,v)) 1.0 1.0 300 0.01
-        forM_ [-5.0, -3.0..5.0] $ \x -> do
-            forM_ [-5.0, -3.0..5.0] $ \y -> do
-                let curve = integrate (interpVelocityField vx vy) (10+x) (10+y) 500 0.1
-                lift $ drawPath [(0.1*u, 0.1*v) | (u, v) <- curve]
+        duringAndAfter time 5 10 $ \_ ->
+            forM_ [-5.0, -3.0..5.0] $ \x -> do
+                forM_ [-5.0, -3.0..5.0] $ \y -> do
+                    let curve = integrate (interpVelocityField vx vy) (10+x) (10+y) 500 0.1
+                    lift $ drawPath [(0.1*u, 0.1*v) | (u, v) <- curve]
 
         return ()
