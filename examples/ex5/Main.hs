@@ -16,9 +16,10 @@ import Sketch
 import Data.Array
 -- import Debug.Trace
 import Turtle
+import Triangles
 
-main :: IO ()
-main = do
+ex5 :: IO ()
+ex5 = do
     mainLoopState 16 (ident @Float 4) $ \time -> do
 
         put (ident @Float 4)
@@ -59,3 +60,26 @@ main = do
                     lift $ drawPath (0.0, 0.0, 0.0) [(0.1*u, 0.1*v) | (u, v) <- curve]
 
         return ()
+
+image1 = do
+    mainLoopState 16 (ident @Float 4) $ \time -> do
+
+        put (ident @Float 4)
+
+        GL.clearColor GL.$= GL.Color4 1.0 1.0 1.0 1
+        io $ GL.clear [GL.ColorBuffer]
+
+        GL.lineSmooth GL.$= GL.Enabled
+        GL.lineWidth GL.$= 2
+        GL.hint GL.LineSmooth GL.$= GL.Nicest
+        GL.multisample GL.$= GL.Enabled
+
+        translate (-0.95) (-0.90) 0.0
+        let vfield x y = (0.01*(x+sin (0.7*y)), 0.01*(-sin(1.0*x-0.5*y)))
+        drawVectorField' (arrow 0.007 0.03 0.03) 13 13 0.15 0.15 $ \i j ->
+            let x = fromIntegral i
+                y = fromIntegral j
+            in vfield x y
+
+main :: IO ()
+main = image1

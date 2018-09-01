@@ -115,12 +115,12 @@ setTransform = do
     lift $ setUniform "turtle"
                "transform" transform
 
-arrow :: Float -> SketchMonad ()
-arrow r = do
-    let thickness = 0.01
+arrow :: Float -> Float -> Float -> Float -> SketchMonad ()
+arrow thickness headLength headWidth r = do
+--     let thickness = 0.01
     constRectangle r thickness
     drawTriangle "turtle"
-        "vPosition" [v2f (0.5*r) (-0.02), v2f (0.5*r+0.05) 0, v2f (0.5*r) 0.02]
+        "vPosition" [v2f (0.5*r) (-0.5*headWidth), v2f (0.5*r+headLength) 0, v2f (0.5*r) (0.5*headWidth)]
         "color" [v4f 0.0 0.0 0.0 1.0, v4f 0.0 0.0 0.0 1.0,
                  v4f 0.0 0.0 0.0 1.0]
 
@@ -136,9 +136,9 @@ grid m n dx dy f =
             setTransform
             f i j
 
-drawVectorField m n dx dy vx vy = drawVectorField' m n dx dy $ interpVelocityField vx vy
+drawVectorField drawArrow m n dx dy vx vy = drawVectorField' drawArrow m n dx dy $ interpVelocityField vx vy
 
-drawVectorField' m n dx dy f =
+drawVectorField' drawArrow m n dx dy f =
     grid m n dx dy $ \i j -> do
         let (vx, vy) = f (fromIntegral i) (fromIntegral j)
         let theta = atan2 vy vx
@@ -148,7 +148,7 @@ drawVectorField' m n dx dy f =
             transform <- get
             lift $ setUniform "turtle"
                               "transform" transform
-            lift $ arrow r
+            lift $ drawArrow r
 
 type ColorMap = Float -> GL.Vertex4 Float
 
