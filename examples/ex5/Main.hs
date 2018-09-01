@@ -63,7 +63,8 @@ ex5 = do
         return ()
 
 image1 = do
-    mainLoopState 1024 1024 16 (ident @Float 4) $ \time -> do
+--     mainLoopState 1024 1024 16 (ident @Float 4) $ \time -> do
+    mainGifLoopState "euler_or_lagrange.gif" 12 768 768 16 1 100 (ident @Float 4) $ \time -> do
 
         put (ident @Float 4)
 
@@ -76,16 +77,20 @@ image1 = do
         GL.multisample GL.$= GL.Enabled
 
         translate (-0.95) (-0.90) 0.0
-        let vfield x y = (0.01*(7*x+sin (7*y)), 0.01*(-sin(10*x-5*y)))
+        let vfield x y = (0.01*(7*sin x+sin (7*y)), 0.01*(-sin (10*x-5*y)))
         beforeAndDuring time 12 14 $ \time ->
             drawVectorField' (arrow (1-time, 1-time, 1-time) 0.007 0.03 0.03) 13 13 0.15 0.15 $ \i j ->
                 let x = 0.15*fromIntegral i
                     y = 0.15*fromIntegral j
                 in vfield x y
-        duringAndAfter time 5 10 $ \time ->
+--         let curve = integrate vfield 0.2 0.1 200 0.2
+--         lift $ drawPath (0.0, 0.0, 0.0) (take 100 curve)
+--         lift $ drawPath (0.0, 0.0, 0.0) (drop 99 curve)
+        duringAndAfter time 0 5 $ \time ->
             forM_ [0.1, 0.2.. 1.9] $ \starty -> do
                 let curve = integrate vfield 0.2 starty (floor (200*time)) 0.2
-                lift $ drawPath (0.0, 0.0, 0.0) [(u, v) | (u, v) <- curve]
+                lift $ drawPath (0.5, 0.5, 0.5) (take 100 curve)
+                lift $ drawPath (0.5, 0.5, 0.5) (drop 99 curve)
 
 main :: IO ()
 main = image1

@@ -112,7 +112,7 @@ init path width height samples = do
 
     start <- getCurrentTime
     let world = World {
-        _windowSize = (512, 512),
+        _windowSize = (fromIntegral width, fromIntegral height),
         _shaderProgram = M.empty,
         _mainWindow = window,
         _startTime = start
@@ -223,11 +223,41 @@ initSketch = do
     SDL.initialize [SDL.InitVideo]
     parse Options { _shaderDirectory = "." } <$> getArgs
 
-mainGifLoop :: String -> Float -> CInt -> CInt -> CInt -> Int -> Int ->(Float -> SketchMonad ()) -> IO ()
+mainGifLoop :: String -> Float -> CInt -> CInt -> CInt -> Int -> Int -> (Float -> SketchMonad ()) -> IO ()
 mainGifLoop filename fps width height samples start end render = do
     options <- initSketch
     world <- init (_shaderDirectory options) width height samples
     io $ evalStateT (gifLoop filename fps start end options [] render) world
+
+mainGifLoopState :: String -> Float -> CInt -> CInt -> CInt -> Int -> Int -> a -> (Float -> StateT a (StateT World IO) ()) -> IO ()
+mainGifLoopState filename fps width height samples start end initial render = do
+    options <- initSketch
+    world <- init (_shaderDirectory options) width height samples
+    evalStateT (evalStateT (gifLoopState filename fps start end options [] render) initial) world
+
+gifLoopState :: String -> Float -> Int -> Int -> Options -> [(Palette, GifDelay, Image Pixel8)] -> (Float -> StateT a (StateT World IO) ()) -> StateT a (StateT World IO) ()
+gifLoopState filename _ j n _ frames _ | j >= n = do
+    case writeGifImages filename LoopingForever frames of
+        Right zzz -> io zzz
+        Left zzz -> do
+            io $ print zzz
+            io $ forM_ frames $ \(p, d, f) -> do
+                print (Codec.Picture.Types.imageWidth f, Codec.Picture.Types.imageHeight f)
+gifLoopState filename fps j n options frames render = do
+    window <- lift $ use mainWindow
+    let interval = fromIntegral j
+    render (interval/fps)
+    (width, height) <- lift $ use windowSize
+    pixelData <- io (mallocForeignPtrArray (fromIntegral $ width*height*3) :: IO (ForeignPtr (PixelBaseComponent PixelRGB8)))
+    (im, pa) <- io $ withForeignPtr pixelData $ \ptr -> do
+                GL.readPixels (GL.Position 0 0) (GL.Size width height) $ GL.PixelData GL.RGB GL.UnsignedByte ptr
+                let gif = makeGif width height pixelData
+                let (im, pa) = palettize defaultPaletteOptions gif
+                return (im, pa)
+    io $ SDL.glSwapWindow window
+    events <- io SDL.pollEvents
+    quit <- lift $ mapM handleUIEvent events
+    unless (or quit) $ gifLoopState filename fps (j+1) n options ((pa, 4, im) : frames) render
 
 loop :: Options -> (Float -> SketchMonad ()) -> SketchMonad ()
 loop options render = do

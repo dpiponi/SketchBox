@@ -61,12 +61,12 @@ rotation theta = let c = cos theta
                                0.0, 0.0, 1.0, 0.0,
                                0.0, 0.0, 0.0, 1.0]
 
-rectangle :: Float -> Float -> SketchMonad ()
-rectangle w h = do
+rectangle :: (Float, Float, Float) -> Float -> Float -> SketchMonad ()
+rectangle (r, g, b) w h = do
     drawTriangle "turtle"
         "vPosition" (rectangleVertices w h)
-        "color" [v4f 1.0 0.0 0.0 1.0, v4f 0.0 1.0 0.0 1.0, v4f 0.0 0.0 1.0 1.0,
-                 v4f 1.0 0.0 0.0 1.0, v4f 0.0 1.0 0.0 1.0, v4f 0.0 0.0 1.0 1.0]
+        "color" [v4f r g b 1.0, v4f r g b 1.0, v4f r g b 1.0,
+                 v4f r g b 1.0, v4f r g b 1.0, v4f r g b 1.0]
 
 drawPath :: (Float, Float, Float) -> [(Float, Float)] -> SketchMonad ()
 drawPath (r, g, b) vs = do    
@@ -80,12 +80,12 @@ plotPath rgb n f t0 t1 = do
     drawPath rgb [f t | i <- [0..n],
                         let t = t0+scale*fromIntegral i]
 
-constRectangle :: Float -> Float -> SketchMonad ()
-constRectangle w h = do
+constRectangle :: (Float, Float, Float) -> Float -> Float -> SketchMonad ()
+constRectangle (r, g, b) w h = do
     drawTriangle "turtle"
         "vPosition" (rectangleVertices w h)
-        "color" [v4f 0.0 0.0 0.0 1.0, v4f 0.0 0.0 0.0 1.0, v4f 0.0 0.0 0.0 1.0,
-                 v4f 0.0 0.0 0.0 1.0, v4f 0.0 0.0 0.0 1.0, v4f 0.0 0.0 0.0 1.0]
+        "color" [v4f r g b 1.0, v4f r g b 1.0, v4f r g b 1.0,
+                 v4f r g b 1.0, v4f r g b 1.0, v4f r g b 1.0]
 
 rectangleVertices :: Float -> Float -> [GL.Vertex2 Float]
 rectangleVertices w h =
@@ -118,7 +118,7 @@ setTransform = do
 arrow :: (Float, Float, Float) -> Float -> Float -> Float -> Float -> SketchMonad ()
 arrow (r, g, b) thickness headLength headWidth length = do
 --     let thickness = 0.01
-    constRectangle length thickness
+    constRectangle (r, g, b) length thickness
     drawTriangle "turtle"
         "vPosition" [v2f (0.5*length) (-0.5*headWidth), v2f (0.5*length+headLength) 0, v2f (0.5*length) (0.5*headWidth)]
         "color" [v4f r g b 1.0, v4f r g b 1.0,
