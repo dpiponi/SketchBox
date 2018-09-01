@@ -106,9 +106,9 @@ instance (UniformType r) => UniformType (String -> H.Matrix Float -> r) where
         cont esp1
 
 -- Some duplication here XXX
-init :: FilePath -> CInt -> IO World
-init path samples = do
-    window <- initWindow samples
+init :: FilePath -> CInt -> CInt -> CInt -> IO World
+init path width height samples = do
+    window <- initWindow width height samples
 
     start <- getCurrentTime
     let world = World {
@@ -223,10 +223,10 @@ initSketch = do
     SDL.initialize [SDL.InitVideo]
     parse Options { _shaderDirectory = "." } <$> getArgs
 
-mainGifLoop :: String -> Float -> CInt -> Int -> Int ->(Float -> SketchMonad ()) -> IO ()
-mainGifLoop filename fps samples start end render = do
+mainGifLoop :: String -> Float -> CInt -> CInt -> CInt -> Int -> Int ->(Float -> SketchMonad ()) -> IO ()
+mainGifLoop filename fps width height samples start end render = do
     options <- initSketch
-    world <- init (_shaderDirectory options) samples
+    world <- init (_shaderDirectory options) width height samples
     io $ evalStateT (gifLoop filename fps start end options [] render) world
 
 loop :: Options -> (Float -> SketchMonad ()) -> SketchMonad ()
@@ -239,10 +239,10 @@ loop options render = do
     quit <- mapM handleUIEvent events
     unless (or quit) $ loop options render
 
-mainLoop :: CInt -> (Float -> SketchMonad ()) -> IO ()
-mainLoop samples render = do
+mainLoop :: CInt -> CInt -> CInt -> (Float -> SketchMonad ()) -> IO ()
+mainLoop width height samples render = do
     options <- initSketch
-    world <- init (_shaderDirectory options) samples
+    world <- init (_shaderDirectory options) width height samples
     io $ evalStateT (loop options render) world
 
 loopState :: Options -> (Float -> StateT a (StateT World IO) ()) -> StateT a (StateT World IO) ()
@@ -257,8 +257,8 @@ loopState options render = do
     quit <- lift $ mapM handleUIEvent events
     unless (or quit) $ loopState options render
 
-mainLoopState :: CInt -> a -> (Float -> StateT a (StateT World IO) ()) -> IO ()
-mainLoopState samples initial render = do
+mainLoopState :: CInt -> CInt -> CInt -> a -> (Float -> StateT a (StateT World IO) ()) -> IO ()
+mainLoopState width height samples initial render = do
     options <- initSketch
-    world <- init (_shaderDirectory options) samples
+    world <- init (_shaderDirectory options) width height samples
     evalStateT (evalStateT (loopState options render) initial) world

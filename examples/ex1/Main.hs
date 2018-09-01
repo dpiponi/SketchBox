@@ -9,7 +9,7 @@ import Points
 import Sketch
 
 main :: IO ()
-main = mainGifLoop "xxx" 12.0 1 0 200 $ \time -> do
+main = mainGifLoop "xxx" 12.0 512 512 1 0 200 $ \time -> do
 
         let t = 0.1*realToFrac time :: Float
 

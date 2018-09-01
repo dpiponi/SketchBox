@@ -3,6 +3,7 @@
 
 module Main where
 
+-- import Prelude hidint (until)
 import Control.Monad.State
 -- import Control.Monad.Trans.Class
 import Numeric.LinearAlgebra.HMatrix hiding (scale, (!))
@@ -20,7 +21,7 @@ import Triangles
 
 ex5 :: IO ()
 ex5 = do
-    mainLoopState 16 (ident @Float 4) $ \time -> do
+    mainLoopState 512 512 16 (ident @Float 4) $ \time -> do
 
         put (ident @Float 4)
 
@@ -62,7 +63,7 @@ ex5 = do
         return ()
 
 image1 = do
-    mainLoopState 16 (ident @Float 4) $ \time -> do
+    mainLoopState 1024 1024 16 (ident @Float 4) $ \time -> do
 
         put (ident @Float 4)
 
@@ -75,11 +76,16 @@ image1 = do
         GL.multisample GL.$= GL.Enabled
 
         translate (-0.95) (-0.90) 0.0
-        let vfield x y = (0.01*(x+sin (0.7*y)), 0.01*(-sin(1.0*x-0.5*y)))
-        drawVectorField' (arrow 0.007 0.03 0.03) 13 13 0.15 0.15 $ \i j ->
-            let x = fromIntegral i
-                y = fromIntegral j
-            in vfield x y
+        let vfield x y = (0.01*(7*x+sin (7*y)), 0.01*(-sin(10*x-5*y)))
+        beforeAndDuring time 12 14 $ \time ->
+            drawVectorField' (arrow (1-time, 1-time, 1-time) 0.007 0.03 0.03) 13 13 0.15 0.15 $ \i j ->
+                let x = 0.15*fromIntegral i
+                    y = 0.15*fromIntegral j
+                in vfield x y
+        duringAndAfter time 5 10 $ \time ->
+            forM_ [0.1, 0.2.. 1.9] $ \starty -> do
+                let curve = integrate vfield 0.2 starty (floor (200*time)) 0.2
+                lift $ drawPath (0.0, 0.0, 0.0) [(u, v) | (u, v) <- curve]
 
 main :: IO ()
 main = image1

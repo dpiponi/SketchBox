@@ -115,14 +115,14 @@ setTransform = do
     lift $ setUniform "turtle"
                "transform" transform
 
-arrow :: Float -> Float -> Float -> Float -> SketchMonad ()
-arrow thickness headLength headWidth r = do
+arrow :: (Float, Float, Float) -> Float -> Float -> Float -> Float -> SketchMonad ()
+arrow (r, g, b) thickness headLength headWidth length = do
 --     let thickness = 0.01
-    constRectangle r thickness
+    constRectangle length thickness
     drawTriangle "turtle"
-        "vPosition" [v2f (0.5*r) (-0.5*headWidth), v2f (0.5*r+headLength) 0, v2f (0.5*r) (0.5*headWidth)]
-        "color" [v4f 0.0 0.0 0.0 1.0, v4f 0.0 0.0 0.0 1.0,
-                 v4f 0.0 0.0 0.0 1.0]
+        "vPosition" [v2f (0.5*length) (-0.5*headWidth), v2f (0.5*length+headLength) 0, v2f (0.5*length) (0.5*headWidth)]
+        "color" [v4f r g b 1.0, v4f r g b 1.0,
+                 v4f r g b 1.0]
 
 grid :: Int -> Int -> Float -> Float ->
         (Int -> Int -> StateT (Matrix Float) (StateT World IO) ()) ->
@@ -250,4 +250,14 @@ duringAndAfter :: Monad m => Float -> Float -> Float -> (Float -> m ()) -> m ()
 duringAndAfter t t0 t1 m = 
     if t < t0
         then return ()
-        else m ((t-t0)/(t1-t0))
+        else if t > t1
+            then m 1
+            else m ((t-t0)/(t1-t0))
+
+beforeAndDuring :: Monad m => Float -> Float -> Float -> (Float -> m ()) -> m ()
+beforeAndDuring t t0 t1 m =
+    if t > t1
+        then return ()
+        else if t < t0
+            then m 1
+            else m ((t-t1)/(t0-t1))

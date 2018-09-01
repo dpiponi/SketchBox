@@ -16,14 +16,14 @@ openGLConfig samples = OpenGLConfig {
         glProfile = Compatibility Normal 2 1
     }
 
-initWindowSize :: V2 CInt
-initWindowSize = V2 512 512
+-- initWindowSize :: V2 CInt
+-- initWindowSize = V2 512 512
 
-initWindow :: CInt -> IO Window
-initWindow samples = do
+initWindow :: CInt -> CInt -> CInt -> IO Window
+initWindow width height samples = do
     window <- createWindow "LitterBox"
                 defaultWindow {
-                    windowInitialSize = initWindowSize,
+                    windowInitialSize = V2 width height,
                     windowResizable = True,
                     windowOpenGL = Just (openGLConfig samples)
                 }
