@@ -68,6 +68,7 @@ rectangle (r, g, b) w h = do
         "color" [v4f r g b 1.0, v4f r g b 1.0, v4f r g b 1.0,
                  v4f r g b 1.0, v4f r g b 1.0, v4f r g b 1.0]
 
+
 drawPath :: (Float, Float, Float) -> [(Float, Float)] -> SketchMonad ()
 drawPath (r, g, b) vs = do    
     drawLine "turtle"

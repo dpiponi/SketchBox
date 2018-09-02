@@ -28,12 +28,14 @@ ex5 = do
     --         let t = 5*realToFrac time :: Float
 
         GL.clearColor GL.$= GL.Color4 1.0 1.0 1.0 1
-        io $ GL.clear [GL.ColorBuffer]
+        GL.clearAccum GL.$= GL.Color4 1.0 1.0 1.0 1
+        io $ GL.clear [GL.ColorBuffer, GL.AccumBuffer]
 
         GL.lineSmooth GL.$= GL.Enabled
         GL.lineWidth GL.$= 2
         GL.hint GL.LineSmooth GL.$= GL.Nicest
         GL.multisample GL.$= GL.Enabled
+        GL.depthFunc GL.$= Just GL.Always
  
         let p = array ((0, 0), (19, 19)) [((ix, iy), 0.25*cos (-0.75*time+2.0*pi*fromIntegral (ix+iy)/10)+
                                                      0.25*sin (0.5*time+3.0*2*pi*(fromIntegral (ix-iy)/20))) |
@@ -63,8 +65,10 @@ ex5 = do
         return ()
 
 image1 = do
---     mainLoopState 1024 1024 16 (ident @Float 4) $ \time -> do
-    mainGifLoopState "euler_or_lagrange.gif" 12 768 768 16 1 100 (ident @Float 4) $ \time -> do
+    mainLoopState 768 768 1 (ident @Float 4) $ \time -> do
+--     mainGifLoopState "euler_or_lagrange.gif" 12 768 768 16 1 100 (ident @Float 4) $ \time -> do
+
+--         let time = fromIntegral 46/12
 
         put (ident @Float 4)
 
@@ -86,11 +90,10 @@ image1 = do
 --         let curve = integrate vfield 0.2 0.1 200 0.2
 --         lift $ drawPath (0.0, 0.0, 0.0) (take 100 curve)
 --         lift $ drawPath (0.0, 0.0, 0.0) (drop 99 curve)
-        duringAndAfter time 0 5 $ \time ->
+        duringAndAfter time 0 5 $ \time -> do
             forM_ [0.1, 0.2.. 1.9] $ \starty -> do
                 let curve = integrate vfield 0.2 starty (floor (200*time)) 0.2
-                lift $ drawPath (0.5, 0.5, 0.5) (take 100 curve)
-                lift $ drawPath (0.5, 0.5, 0.5) (drop 99 curve)
+                lift $ drawPath (0.0, 0.0, 0.0) curve
 
 main :: IO ()
 main = image1
