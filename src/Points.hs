@@ -49,9 +49,10 @@ drawPoint'' compSize esp0 mn0 cont attr values = drawPoint' esp0 mn0 $ \esp1 mn1
     program <- lookupEsp esp1
     loc <- get $ attribLocation program attr
     vertexAttribArray loc GL.$= Enabled
-    io $ withArray values $ \ptr ->
-        vertexAttribPointer loc GL.$=
-          (ToFloat, VertexArrayDescriptor compSize Float 0 ptr) -- ToFloat XXX
+--     io $ withArray values $ \ptr ->
+    ptr <- io $ newArray values
+    vertexAttribPointer loc GL.$=
+      (ToFloat, VertexArrayDescriptor compSize Float 0 ptr) -- ToFloat XXX
     let nn = length values
     if mn1 == Just nn || isNothing mn1
         then do

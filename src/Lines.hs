@@ -47,28 +47,16 @@ instance (LineType r, VertexAttribComponent a) => LineType (String -> [GL.Vertex
 instance (LineType r, VertexAttribComponent a) => LineType (String -> [GL.Vertex4 a] -> r) where
     drawLine' = drawLine'' 4
 
-bufferOffset :: Integral a => a -> Ptr b
-bufferOffset = plusPtr nullPtr . fromIntegral
-
 drawLine'' :: (LineType r, Storable a) =>
     NumComponents -> LineOp (LineOp (SketchMonad ()) -> String -> [a] -> r)
 drawLine'' size esp0 mn0 cont attr values = drawLine' esp0 mn0 $ \esp1 mn1 -> do
     program <- lookupEsp esp1
     loc <- get $ attribLocation program attr
     vertexAttribArray loc GL.$= Enabled
---     ptr <- io $ newArray values
-    arrayBuffer <- GL.genObjectName
-    io $ print arrayBuffer
-    bindBuffer ArrayBuffer $= Just arrayBuffer
-    io $ withArray values $ \ptr -> do
-              let size = fromIntegral (length values * sizeOf (head values))
-              bufferData ArrayBuffer $= (size, ptr, StaticDraw)
---     bindBuffer ArrayBuffer $= Nothing
+    ptr <- io $ newArray values
 --     io $ withArray values $ \ptr ->
---         vertexAttribPointer loc GL.$=
---           (ToFloat, VertexArrayDescriptor size Float 0 ptr) -- ToFloat XXX
-    vertexAttribPointer loc $=
-            (ToFloat, VertexArrayDescriptor size Float 0 (bufferOffset 0))
+    vertexAttribPointer loc GL.$=
+      (ToFloat, VertexArrayDescriptor size Float 0 ptr) -- ToFloat XXX
     let nn = length values
     if mn1 == Just nn || isNothing mn1
         then do

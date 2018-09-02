@@ -32,7 +32,7 @@ ex5 = do
         io $ GL.clear [GL.ColorBuffer, GL.AccumBuffer]
 
         GL.lineSmooth GL.$= GL.Enabled
-        GL.lineWidth GL.$= 2
+        GL.lineWidth GL.$= 4
         GL.hint GL.LineSmooth GL.$= GL.Nicest
         GL.multisample GL.$= GL.Enabled
         GL.depthFunc GL.$= Just GL.Always
@@ -65,7 +65,7 @@ ex5 = do
         return ()
 
 image1 = do
-    mainLoopState 768 768 1 (ident @Float 4) $ \time -> do
+    mainLoopState 768 768 16 (ident @Float 4) $ \time -> do
 --     mainGifLoopState "euler_or_lagrange.gif" 12 768 768 16 1 100 (ident @Float 4) $ \time -> do
 
 --         let time = fromIntegral 46/12
@@ -76,12 +76,12 @@ image1 = do
         io $ GL.clear [GL.ColorBuffer]
 
         GL.lineSmooth GL.$= GL.Enabled
-        GL.lineWidth GL.$= 2
+        GL.lineWidth GL.$= 3
         GL.hint GL.LineSmooth GL.$= GL.Nicest
         GL.multisample GL.$= GL.Enabled
 
         translate (-0.95) (-0.90) 0.0
-        let vfield x y = (0.01*(7*sin x+sin (7*y)), 0.01*(-sin (10*x-5*y)))
+        let vfield x y = (0.01*cos x+0.01*(y-cos 2*y+0.2*sin(2*x)), -0.02*(sin x-1+0.5*sin (5*y)))
         beforeAndDuring time 12 14 $ \time ->
             drawVectorField' (arrow (1-time, 1-time, 1-time) 0.007 0.03 0.03) 13 13 0.15 0.15 $ \i j ->
                 let x = 0.15*fromIntegral i
