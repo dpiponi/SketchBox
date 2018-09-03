@@ -39,9 +39,13 @@ instance (PointType r) => PointType (String -> [Float] -> r) where
 instance (PointType r, VertexAttribComponent a) => PointType (String -> GL.Vertex2 a -> r) where
     drawPoint' esp mn cont attr value = drawPoint'' 2 esp mn cont attr [value]
 
+-- A vector4
+instance (PointType r, VertexAttribComponent a) => PointType (String -> GL.Vertex4 a -> r) where
+    drawPoint' esp mn cont attr value = drawPoint'' 4 esp mn cont attr [value]
+
 -- Vector2 array
 instance (PointType r, VertexAttribComponent a) => PointType (String -> [GL.Vertex2 a] -> r) where
-    drawPoint' = drawPoint'' 2
+    drawPoint' = drawPoint'' 2 
 
 drawPoint'' :: (PointType r, Storable a) =>
     NumComponents -> PointOp (PointOp (SketchMonad ()) -> String -> [a] -> r)

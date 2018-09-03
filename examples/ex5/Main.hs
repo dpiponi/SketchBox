@@ -11,7 +11,7 @@ import qualified Graphics.Rendering.OpenGL as GL
 -- import Foreign.Storable
 import GLCode
 import Sketch
--- import Points
+import Points
 -- import Lines
 -- import Triangles
 import Data.Array
@@ -81,8 +81,9 @@ image1 = do
         GL.multisample GL.$= GL.Enabled
 
         translate (-0.95) (-0.90) 0.0
-        let vfield x y = (0.01*cos x+0.01*(y-cos 2*y+0.2*sin(2*x)), -0.02*(sin x-1+0.5*sin (5*y)))
-        beforeAndDuring time 12 14 $ \time ->
+--         let vfield x y = (0.01*cos x+0.01*(y-cos 2*y+0.2*sin(2*x)), -0.02*(sin x-1+0.5*sin (5*y)))
+        let vfield x y = (0.01*(y-1)+0.01*(sin y-1), -0.01*(x-1)-0.01*sin (3*x))
+        beforeAndDuring time 14 16 $ \time ->
             drawVectorField' (arrow (1-time, 1-time, 1-time) 0.007 0.03 0.03) 13 13 0.15 0.15 $ \i j ->
                 let x = 0.15*fromIntegral i
                     y = 0.15*fromIntegral j
@@ -90,10 +91,18 @@ image1 = do
 --         let curve = integrate vfield 0.2 0.1 200 0.2
 --         lift $ drawPath (0.0, 0.0, 0.0) (take 100 curve)
 --         lift $ drawPath (0.0, 0.0, 0.0) (drop 99 curve)
-        duringAndAfter time 0 5 $ \time -> do
-            forM_ [0.1, 0.2.. 1.9] $ \starty -> do
-                let curve = integrate vfield 0.2 starty (floor (200*time)) 0.2
-                lift $ drawPath (0.0, 0.0, 0.0) curve
+        duringAndAfter time 5 12 $ \time' -> do
+            forM_ [-0.5, -0.4..2.9] $ \starty -> do
+                forM_ [-0.5, -0.4..2.9] $ \startx -> do
+                    let curve = integrate vfield startx starty (floor (400*time')) 0.2
+--                     beforeAndDuring time 14 16 $ \time ->
+--                             lift $ drawPath (1-time, 1-time, 1-time) curve
+                    when (length curve > 0) $ do
+                        lift $ setUniform "turtle_point" "pointSize" (12.0 :: Float)
+                        setTransformPoint
+                        lift $ drawPoint "turtle_point"
+                                   "vPosition" ((\(x, y) -> v2f x y) (last curve))
+                                   "color" (v4f 0.0 0.2 0.9 1.0)
 
 main :: IO ()
 main = image1

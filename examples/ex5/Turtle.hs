@@ -116,6 +116,12 @@ setTransform = do
     lift $ setUniform "turtle"
                "transform" transform
 
+setTransformPoint :: StateT (Matrix Float) (StateT World IO) ()
+setTransformPoint = do
+    transform <- get
+    lift $ setUniform "turtle_point"
+               "transform" transform
+
 arrow :: (Float, Float, Float) -> Float -> Float -> Float -> Float -> SketchMonad ()
 arrow (r, g, b) thickness headLength headWidth length = do
 --     let thickness = 0.01
